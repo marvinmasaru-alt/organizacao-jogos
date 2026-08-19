@@ -1,0 +1,25 @@
+# Dependências
+node_modules/
+
+# Builds
+dist/
+.angular/
+coverage/
+
+# Variáveis de ambiente e credenciais — NUNCA commitar
+.env
+.env.*
+!.env.example
+*.key.json
+service-account*.json
+credentials*.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operacional / editor
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
