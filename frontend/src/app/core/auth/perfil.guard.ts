@@ -13,6 +13,6 @@ export const perfilGuard = (perfisPermitidos: PerfilUsuario[]): CanActivateFn =>
     if (usuario && perfisPermitidos.includes(usuario.perfil)) {
       return true;
     }
-    return router.parseUrl('/board');
+    return router.parseUrl('/dashboard');
   };
 };

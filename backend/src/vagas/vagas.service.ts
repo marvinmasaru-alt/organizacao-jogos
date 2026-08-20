@@ -1,18 +1,22 @@
 import { Injectable } from '@nestjs/common';
 import { GoogleSheetsService } from '../common/google-sheets/google-sheets.service';
-import { StatusVaga } from '../common/types/enums';
+import { AlocacoesService } from '../alocacoes/alocacoes.service';
+import { StatusVaga, TipoTrabalho } from '../common/types/enums';
 import { Vaga, VagaComDisponibilidade } from './vaga.entity';
 
 const SHEET_NAME = 'VAGAS';
 
 @Injectable()
 export class VagasService {
-  constructor(private readonly sheets: GoogleSheetsService) {}
+  constructor(
+    private readonly sheets: GoogleSheetsService,
+    private readonly alocacoesService: AlocacoesService,
+  ) {}
 
-  // TODO: mapear as linhas cruas da planilha para Vaga[].
   async listarTodas(): Promise<Vaga[]> {
-    await this.sheets.readSheet(SHEET_NAME);
-    return [];
+    const linhas = await this.sheets.readSheet(SHEET_NAME);
+    // Linha 1 é cabeçalho (ID, Data, Sede_ID, Tipo, Quantidade, Status).
+    return linhas.slice(1).map((linha) => this.mapearLinha(linha));
   }
 
   async listarPorData(data: string): Promise<Vaga[]> {
@@ -21,24 +25,38 @@ export class VagasService {
   }
 
   /**
-   * Calcula disponibilidade real de cada vaga (quantidade - alocações com
-   * Status = ALOCADO), nunca negativo. Consumido pelo BoardModule.
-   *
-   * TODO: injetar/consultar AlocacoesService para contar alocações válidas
-   * por vaga em vez de deixar o cálculo zerado.
+   * Calcula disponibilidade real de cada vaga (quantidade - alocações que
+   * ocupam a vaga, ver AlocacoesService), nunca negativo. Consumido pelo
+   * DashboardModule.
    */
   async calcularDisponibilidade(
     vagas: Vaga[],
   ): Promise<VagaComDisponibilidade[]> {
-    return vagas.map((v) => {
-      const alocacoesValidas = 0; // TODO
-      const disponiveis = Math.max(0, v.quantidade - alocacoesValidas);
-      return {
-        ...v,
-        alocacoesValidas,
-        disponiveis,
-        status: disponiveis === 0 ? StatusVaga.COMPLETA : StatusVaga.ABERTA,
-      };
-    });
+    return Promise.all(
+      vagas.map(async (v) => {
+        const alocacoesValidas = (
+          await this.alocacoesService.listarValidasPorVaga(v.id)
+        ).length;
+        const disponiveis = Math.max(0, v.quantidade - alocacoesValidas);
+        return {
+          ...v,
+          alocacoesValidas,
+          disponiveis,
+          status: disponiveis === 0 ? StatusVaga.COMPLETA : StatusVaga.ABERTA,
+        };
+      }),
+    );
+  }
+
+  private mapearLinha(linha: string[]): Vaga {
+    const [id, data, sedeId, tipo, quantidade, status] = linha;
+    return {
+      id: id ?? '',
+      data: data ?? '',
+      sedeId: sedeId ?? '',
+      tipo: (tipo as TipoTrabalho) || TipoTrabalho.AJUDANTE,
+      quantidade: Number(quantidade) || 0,
+      status: (status as StatusVaga) || StatusVaga.ABERTA,
+    };
   }
 }

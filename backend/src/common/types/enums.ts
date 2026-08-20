@@ -31,6 +31,7 @@ export enum StatusVaga {
 export enum StatusAlocacao {
   ALOCADO = 'ALOCADO',
   CANCELADO = 'CANCELADO',
+  FALTOU = 'FALTOU',
 }
 
 export enum StatusFalta {

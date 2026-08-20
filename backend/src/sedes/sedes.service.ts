@@ -8,15 +8,32 @@ const SHEET_NAME = 'SEDES';
 export class SedesService {
   constructor(private readonly sheets: GoogleSheetsService) {}
 
-  // TODO: mapear as linhas cruas da planilha para Sede[].
   async listarTodas(): Promise<Sede[]> {
-    await this.sheets.readSheet(SHEET_NAME);
-    return [];
+    const linhas = await this.sheets.readSheet(SHEET_NAME);
+    // Linha 1 é cabeçalho (ID, Nome, Tipo_Sede, Responsável_ID, Status, Localizacao).
+    return linhas.slice(1).map((linha) => this.mapearLinha(linha));
+  }
+
+  async buscarPorId(id: string): Promise<Sede | null> {
+    const todas = await this.listarTodas();
+    return todas.find((s) => s.id === id) ?? null;
   }
 
   /** Filtro "Minhas sedes" = Sedes.Responsavel_ID == usuário logado. */
   async listarPorResponsavel(responsavelId: string): Promise<Sede[]> {
     const todas = await this.listarTodas();
     return todas.filter((s) => s.responsavelId === responsavelId);
+  }
+
+  private mapearLinha(linha: string[]): Sede {
+    const [id, nome, tipoSede, responsavelId, status, localizacao] = linha;
+    return {
+      id: id ?? '',
+      nome: nome ?? '',
+      tipoSede: tipoSede ?? '',
+      responsavelId: responsavelId ?? '',
+      status: status ?? '',
+      localizacao: localizacao ?? '',
+    };
   }
 }

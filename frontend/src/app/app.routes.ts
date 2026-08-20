@@ -18,12 +18,12 @@ export const routes: Routes = [
     path: '',
     canActivate: [authGuard],
     children: [
-      { path: '', redirectTo: 'board', pathMatch: 'full' },
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       {
-        path: 'board',
+        path: 'dashboard',
         loadComponent: () =>
-          import('./features/board/board.component').then(
-            (m) => m.BoardComponent,
+          import('./features/dashboard/dashboard.component').then(
+            (m) => m.DashboardComponent,
           ),
       },
       {
@@ -78,5 +78,5 @@ export const routes: Routes = [
       },
     ],
   },
-  { path: '**', redirectTo: 'board' },
+  { path: '**', redirectTo: 'dashboard' },
 ];

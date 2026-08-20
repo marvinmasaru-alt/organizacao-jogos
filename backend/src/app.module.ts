@@ -6,7 +6,7 @@ import { ResponsaveisModule } from './responsaveis/responsaveis.module';
 import { FuncionariosModule } from './funcionarios/funcionarios.module';
 import { SedesModule } from './sedes/sedes.module';
 import { VagasModule } from './vagas/vagas.module';
-import { BoardModule } from './board/board.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { AlocacoesModule } from './alocacoes/alocacoes.module';
 import { FaltasModule } from './faltas/faltas.module';
 import { PagamentosModule } from './pagamentos/pagamentos.module';
@@ -21,7 +21,7 @@ import { HistoricoModule } from './historico/historico.module';
     FuncionariosModule,
     SedesModule,
     VagasModule,
-    BoardModule,
+    DashboardModule,
     AlocacoesModule,
     FaltasModule,
     PagamentosModule,

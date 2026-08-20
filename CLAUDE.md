@@ -236,6 +236,7 @@ Comissões · Histórico · Permissões
 ## Relacão de tabelas:
 
 ### Responsaveis
+Cadastrado manualmente nas tabelas pelo administrador
 - Id: Id unico do responsavel, R001
 - Nome: Nome do responsavel
 - Codigo: Código utilizado quando for usar o form de autenticacao
@@ -245,6 +246,7 @@ Comissões · Histórico · Permissões
 - senha: Senha para entrar no sistema
 
 ### Funcionarios
+O cadastro é feito por google forms, utilizado para mostrar para o responsavel todos os funcionarios disponiveis a ele, e tambem para fazer alocação e pagamento de funcionarios
 - Id: Id unico funcionario F0001
 - Nome: nome
 - Telefone: telefone
@@ -257,6 +259,7 @@ Comissões · Histórico · Permissões
 - Data aprovação: Data que saiu do pendente
 
 ### Sedes
+Cadastrado manualmente pelo administrador
 - ID: Id unico S001
 - Nome: nome da sede
 - Tipo_Sede: Enum EXTERNA/HUB
@@ -265,6 +268,7 @@ Comissões · Histórico · Permissões
 - Localizacao: Link do google maps
 
 ### Vagas
+Cadastrado por formulario pelo chefe, utilizado para mostrar quais sao as vagas disponiveis em cada sede, que vai aparecer no dashboard
 - ID: Id unico da vaga V0001
 - Data: data de cadastro da vaga
 - Sede_ID: id da sede
@@ -273,27 +277,48 @@ Comissões · Histórico · Permissões
 - Status: Se está ATIVO/INATIVO
 
 ### Alocacoes
+cadastrado pelo app
 - ID: Id unica ca alocacao A0001
 - Vaga_ID: Id da vaga
 - Funcionario_ID: Id do funcionario alocado
 - Responsavel_Sede_ID: Id do responsavel da sede
 - Responsavel_Fornecimento_ID: Id da pessoa que alocou
-- Data: 
-- Valor_Recebido: 
-- Valor_Funcionario: 
-- Comissao_Total: 
-- Comissao_Responsavel_Sede: 
-- Comissao_Responsavel_Fornecimento: 
-- Extra_Responsavel: 
-- Status: 
-- Data_Cancelamento: 
-- Motivo_Cancelamento: 
-- Data_Falta: 
-- Motivo_Falta: 
+- Data: Data que foi feito a alocação
+- Valor_Recebido: valor que vai ser recebido pela alocação
+- Valor_Funcionario: valor que o funcionario vai receber
+- Comissao_Total: total que vai ser a comissão do(s) responsavel(eis) envolvidos
+- Comissao_Responsavel_Sede: Quanto que o responsavel da sede vai receber (O valor do funcionario mais metade da comissão, ou a comissão inteira se ele tambem for o responsavel fornecimento)
+- Comissao_Responsavel_Fornecimento: Metade da comissão (Ou zero se ele  tambem for o responsavel da sede)
+- Extra_Responsavel: Valor extra que o responsavel teve que tirar do bolso caso ele queira pagar a mais para o funcionario
+- Status: Qual o status da alocação: ALOCADO/CANCELADO/FALTOU
+- Data_Cancelamento: Data que foi cancelado
+- Motivo_Cancelamento: Motivo de cancelamento
+- Data_Falta: Data da falta
+- Motivo_Falta: Motivo de ter faltado (Pode ser preenchido depois)
+- Falta_Urgente: VERDADEIRA/FALSO, utilizado para saber se precisa aparecer no dashboard como ação a ser tomada
 
 ### Valores
-ID	Tipo_Sede	Tipo	Valor_Reccebido	Valor_Funcionario_Fixo	Valor_Funcionario_Variavel	Status																			
+tabela para salvar o valor que foi pago ao funcionario, pode ser fixo ou variavel, se for HUB o valor é variavel
+- ID: Id unico dos valores V001
+- Tipo_Sede	Tipo: Enumerado para saber o tipo de sede: EXTERNO/HUB
+- Valor_Reccebido: valor fixo recebido pelo trabalho, 16000 ajudante, 18000 pilota o forklift para sede externa. Para HUB é 20000 ajudante, 22000 forklift
+- Valor_Funcionario_Fixo: Valor que o funcionario recebe, 12000 ajudante, 15000
+- Valor_Funcionario_Variavel:Valor utilizado para informar quanto que o funcionario do hub vai ganhar se não for informado um valor diferente na hora
+- Status: Status para saber se esta vigente ainda ou não ATIVO/INATIVO
+- Vigencia_Inicio: Data de inicio da vigencia
+- Vigencia_Inicio: Data de fim da vigencia
 
 ### Pagamentos
-ID	Tipo	Responsavel_ID	Alocacao_ID	Funcionario_ID	Valor	Data_Prevista	Data_Pagamento	Status	Status_Prazo	Observacao																
-###
+- ID: Id unico de pagamentos Exemplo: P0001
+- Tipo: Tipo de trabalho que originou o pagamento AJUDANTE/FORKLIFT
+- Responsavel_ID: Responsável que deve realizar o pagamento
+- Alocacao_ID: Alocação que originou o pagamento
+- Funcionario_ID: Funcionário que receberá
+- Valor: Valor que deve ser pago
+- Data_Prevista: Data limite/prevista para pagamento, normalmente uma semana após a alocação
+- Data_Pagamento: Data em que o pagamento foi efetivamente realizado, informado pelo responsavel na hora do pagamento
+- Status: Estado atual do pagamento: PENDENTE/FEITO/CANCELADO
+- Tipo_Pagamento: Se foi um pagamento em maos ou deposito bancario: EM_MAOS/DEPOSITO
+- Comprovante: Link de foto que pode ser informada pelo forms para comprovante
+- Observacao: Observação adicional que pode ser informado
+

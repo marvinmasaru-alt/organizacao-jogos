@@ -1,0 +1,97 @@
+<header class="cabecalho">
+  <h1>Dashboard</h1>
+  <div class="seletor-data">
+    <button type="button" (click)="irParaDataAnterior()" aria-label="Dia anterior">←</button>
+    <input
+      type="date"
+      [value]="data()"
+      (change)="selecionarData($any($event.target).value)"
+      aria-label="Selecionar data"
+    />
+    <button type="button" (click)="irParaProximaData()" aria-label="Próximo dia">→</button>
+  </div>
+</header>
+
+@switch (estado()) {
+  @case ('carregando') {
+    <p class="estado">Carregando…</p>
+  }
+  @case ('erro') {
+    <p class="estado estado--erro">
+      Não foi possível carregar os dados. Tente novamente.
+    </p>
+  }
+  @case ('vazio') {
+    <p class="estado">Nenhuma vaga encontrada para esta data.</p>
+  }
+  @case ('carregado') {
+    @if (resumo(); as r) {
+      <section class="pendencias" aria-label="Pendências">
+        <h2>Pendências</h2>
+        @if (r.pendencias.substituicoesUrgentes.length === 0 && r.pendencias.vagasIncompletas.length === 0) {
+          <p>Nenhuma pendência para esta data.</p>
+        } @else {
+          <ul>
+            @for (item of r.pendencias.substituicoesUrgentes; track item.vagaId) {
+              <li>🔴 Necessita de substituição urgente — vaga {{ item.vagaId }}</li>
+            }
+            @for (item of r.pendencias.vagasIncompletas; track item.vagaId) {
+              <li>🟡 Vaga incompleta — {{ item.tipo }}, faltam {{ item.faltam }}</li>
+            }
+          </ul>
+        }
+      </section>
+
+      <section class="totais" aria-label="Totais">
+        <div class="card">
+          <span class="card__valor">{{ r.totais.totalVagas }}</span>
+          <span class="card__label">vagas hoje</span>
+          <span class="card__detalhe">
+            {{ r.totais.vagasCompletas }} completas · {{ r.totais.vagasIncompletas }} incompletas
+          </span>
+        </div>
+        <div class="card">
+          <span class="card__valor">{{ r.totais.ocupacaoPercentual }}%</span>
+          <span class="card__label">ocupação</span>
+          <span class="card__detalhe">
+            {{ r.totais.totalAlocado }} / {{ r.totais.totalNecessario }} funcionários
+          </span>
+        </div>
+        <div class="card">
+          <span class="card__valor">
+            {{ r.pendencias.vagasIncompletas.length + r.pendencias.substituicoesUrgentes.length }}
+          </span>
+          <span class="card__label">pendências</span>
+        </div>
+      </section>
+
+      <section class="vagas-do-dia" aria-label="Vagas de hoje">
+        <h2>Vagas de hoje</h2>
+        @for (sede of r.sedes; track sede.sedeId) {
+          <article class="sede-card">
+            <h3>
+              {{ sede.nome }}
+              @if (sede.localizacao) {
+                <a [href]="sede.localizacao" target="_blank" rel="noopener">📍 localização</a>
+              }
+            </h3>
+            @for (vaga of sede.vagas; track vaga.id) {
+              <div class="vaga-linha">
+                <span class="vaga-linha__tipo">{{ vaga.tipo }}</span>
+                <span class="vaga-linha__ocupacao">
+                  {{ vaga.alocacoesValidas }} / {{ vaga.quantidade }}
+                </span>
+                <span
+                  class="vaga-linha__status"
+                  [class.vaga-linha__status--completa]="vaga.status === 'COMPLETA'"
+                >
+                  {{ vaga.status === 'COMPLETA' ? '✓ Completo' : (vaga.disponiveis + ' vagas disponíveis') }}
+                </span>
+              </div>
+            }
+          </article>
+        }
+      </section>
+    }
+  }
+}
