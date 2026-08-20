@@ -1,7 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(nohup node dist/main)",
+      "Bash(disown)",
+      "Read(//tmp/**)",
+      "Bash(lsof -i :3000 -sTCP:LISTEN)",
+      "Bash(curl -s 'http://localhost:3000/dashboard?data=2026-08-20&escopo=minha' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im1hcnZpbi5tYXNhcnVAZ21haWwuY29tIiwibm9tZSI6IkFuZHJlIiwicGVyZmlsIjoiUkVTUE9OU0FWRUwiLCJyZXNwb25zYXZlbElkIjoiUjAwMiIsImlhdCI6MTc4NzIwNjcyMSwiZXhwIjoxNzg3MjEwMzIxfQ.Zgbj6SA6FusNUeehnmLBnGRsMwPSJgej7MZYg3aG_tc')",
+      "Bash(node -e ' *)",
+      "Bash(curl -s 'http://localhost:3000/dashboard?data=2026-08-20&escopo=minha' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im1hcnZpbi5tYXNhcnVAZ21haWwuY29tIiwibm9tZSI6IkFuZHJlIiwicGVyZmlsIjoiUkVTUE9OU0FWRUwiLCJyZXNwb25zYXZlbElkIjoiUjAwMiIsImlhdCI6MTc4NzIxMTM5MCwiZXhwIjoxNzg3MjE0OTkwfQ.LaniEW_aegmYLD_5Oofp42qiqA2jPqfAoGHKxgnJpMU')",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\([s['sedeId'] for s in d['sedes']]\\)\")",
+      "Bash(kill 47103)"
     ]
   }
 }

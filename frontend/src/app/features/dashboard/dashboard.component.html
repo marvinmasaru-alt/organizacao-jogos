@@ -10,6 +10,18 @@
     />
     <button type="button" (click)="irParaProximaData()" aria-label="Próximo dia">→</button>
   </div>
+
+  @if (mostrarSeletorDeEscopo()) {
+    <select
+      class="seletor-escopo"
+      [value]="escopo()"
+      (change)="selecionarEscopo($any($event.target).value)"
+      aria-label="Filtrar sedes"
+    >
+      <option value="todas">Todas as sedes</option>
+      <option value="minha">Minha sede</option>
+    </select>
+  }
 </header>
 
 @switch (estado()) {

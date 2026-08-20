@@ -5,12 +5,19 @@ import { SedesService } from '../sedes/sedes.service';
 import { VagasService } from '../vagas/vagas.service';
 import { UsuarioAutenticado } from '../auth/auth.service';
 
+export type EscopoSedes = 'minha' | 'todas';
+
 /**
  * Read model do Dashboard principal: resume, por sede, tipo, "X/Y" e
  * "✓ Completo" / "N vagas disponíveis" para uma data (padrão = hoje).
  * Nunca expõe nome de quem faltou — só o indicador de urgência (ver
  * AlocacoesService.listarFaltasUrgentesPorData).
- * Responsável só vê as próprias sedes; Administrador vê tudo.
+ *
+ * Sedes e vagas não têm restrição de acesso — qualquer usuário logado pode
+ * ver todas. O filtro "Minha sede" é só uma conveniência de visualização,
+ * opt-in via `escopo`: só restringe às sedes do próprio responsável quando
+ * o usuário pede explicitamente. Padrão é "todas" (sem filtro nenhum).
+ * Administrador não tem sede própria — "minha" nunca filtra nada pra ele.
  */
 @Injectable()
 export class DashboardService {
@@ -20,13 +27,19 @@ export class DashboardService {
     private readonly alocacoesService: AlocacoesService,
   ) {}
 
-  async resumoPorData(data: string, usuario: UsuarioAutenticado) {
-    const sedes =
-      usuario.perfil === PerfilUsuario.ADMINISTRADOR
-        ? await this.sedesService.listarTodas()
-        : await this.sedesService.listarPorResponsavel(
-            usuario.responsavelId ?? '',
-          );
+  async resumoPorData(
+    data: string,
+    usuario: UsuarioAutenticado,
+    escopo: EscopoSedes = 'todas',
+  ) {
+    const filtrarPorMinhaSede =
+      escopo === 'minha' &&
+      usuario.perfil === PerfilUsuario.RESPONSAVEL &&
+      !!usuario.responsavelId;
+
+    const sedes = filtrarPorMinhaSede
+      ? await this.sedesService.listarPorResponsavel(usuario.responsavelId!)
+      : await this.sedesService.listarTodas();
 
     const sedeIds = new Set(sedes.map((s) => s.id));
 

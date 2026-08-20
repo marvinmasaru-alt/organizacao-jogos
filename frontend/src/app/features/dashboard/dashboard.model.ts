@@ -1,4 +1,13 @@
-/** Espelha a resposta de GET /dashboard (backend/src/dashboard/dashboard.service.ts). */
+/**
+ * Filtro opt-in de visualização: "todas" (padrão, sem restrição) ou
+ * "minha" (só as sedes do próprio responsável). Não é controle de acesso —
+ * é só conveniência, o usuário pode ver tudo a qualquer momento.
+ */
+export type EscopoSedes = 'minha' | 'todas';
+
+/**
+ * Espelha a resposta de GET /dashboard (backend/src/dashboard/dashboard.service.ts).
+ */
 export interface VagaResumo {
   id: string;
   data: string;

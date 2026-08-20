@@ -1,7 +1,7 @@
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UsuarioAutenticado } from '../auth/auth.service';
-import { DashboardService } from './dashboard.service';
+import { DashboardService, EscopoSedes } from './dashboard.service';
 
 interface RequestComSessao {
   user: UsuarioAutenticado;
@@ -15,9 +15,14 @@ export class DashboardController {
   @Get()
   resumo(
     @Query('data') data: string | undefined,
+    @Query('escopo') escopo: EscopoSedes | undefined,
     @Req() req: RequestComSessao,
   ) {
     const hoje = new Date().toISOString().slice(0, 10);
-    return this.service.resumoPorData(data ?? hoje, req.user);
+    return this.service.resumoPorData(
+      data ?? hoje,
+      req.user,
+      escopo === 'minha' ? 'minha' : 'todas',
+    );
   }
 }

@@ -117,13 +117,20 @@ RESPONSAVEIS
 
 ### Sedes
 - Campos: ID, Nome, Tipo_Sede, Responsável_ID, Status, Localizacao (link).
-- Filtro "Minhas sedes" = `Sedes.Responsável_ID == usuário logado`.
-- Filtro "Todas as sedes" = sem restrição (responsável pode precisar ver
-  situação de sede que não é dele).
+- **Sem restrição de visibilidade**: todo usuário logado (Administrador ou
+  qualquer Responsável) pode ver todas as sedes, sem limite —
+  `Responsável_ID` identifica quem administra a sede, não quem pode vê-la.
+- Dashboard tem um filtro opt-in "Minha sede" / "Todas as sedes" (padrão:
+  Todas). É só conveniência de visualização, não controle de acesso — só
+  restringe às sedes do próprio responsável quando ele escolhe
+  explicitamente "Minha sede"; Administrador não tem sede própria, então o
+  filtro não se aplica a ele.
 - Board deve exibir o link de localização de forma clicável.
 
 ### Vagas
 - Campos: ID, Data, Sede_ID, Tipo (Ajudante/Forklift), Quantidade, Status.
+- **Sem restrição de visibilidade**: mesma regra das Sedes — todo usuário
+  logado vê todas as vagas, sem limite.
 - `disponíveis = quantidade - alocações válidas` (nunca negativo).
 - Board principal deve mostrar de forma resumida por sede: tipo, `X/Y`,
   "✓ Completo" ou "N vagas disponíveis".

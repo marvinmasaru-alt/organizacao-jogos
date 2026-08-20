@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { AuthService } from '../../core/auth/auth.service';
 import { DashboardService } from './dashboard.service';
-import { DashboardResumo } from './dashboard.model';
+import { DashboardResumo, EscopoSedes } from './dashboard.model';
 
 type EstadoTela = 'carregando' | 'erro' | 'vazio' | 'carregado';
 
@@ -18,10 +19,17 @@ function paraDataIso(d: Date): string {
 })
 export class DashboardComponent implements OnInit {
   private readonly service = inject(DashboardService);
+  private readonly auth = inject(AuthService);
 
   readonly data = signal(paraDataIso(new Date()));
+  readonly escopo = signal<EscopoSedes>('todas');
   readonly estado = signal<EstadoTela>('carregando');
   readonly resumo = signal<DashboardResumo | null>(null);
+
+  /** Administrador não tem "minha sede" — o filtro não faz sentido pra ele. */
+  readonly mostrarSeletorDeEscopo = computed(
+    () => this.auth.usuario()?.perfil !== 'ADMINISTRADOR',
+  );
 
   ngOnInit(): void {
     this.carregar();
@@ -43,6 +51,11 @@ export class DashboardComponent implements OnInit {
     this.carregar();
   }
 
+  selecionarEscopo(escopo: string): void {
+    this.escopo.set(escopo === 'minha' ? 'minha' : 'todas');
+    this.carregar();
+  }
+
   private mudarData(deltaDias: number): void {
     const atual = new Date(`${this.data()}T00:00:00`);
     atual.setDate(atual.getDate() + deltaDias);
@@ -52,7 +65,7 @@ export class DashboardComponent implements OnInit {
 
   private carregar(): void {
     this.estado.set('carregando');
-    this.service.resumoPorData(this.data()).subscribe({
+    this.service.resumoPorData(this.data(), this.escopo()).subscribe({
       next: (resumo) => {
         this.resumo.set(resumo);
         this.estado.set(resumo.sedes.length === 0 ? 'vazio' : 'carregado');
