@@ -32,7 +32,12 @@
       "Bash(kill -9 54042)",
       "Bash(node dist/main > /tmp/final_boot.log 2>&1)",
       "Bash(pkill -9 -f \"backend/dist/main\")",
-      "Bash(kill -9 54467)"
+      "Bash(kill -9 54467)",
+      "Bash(ps -p 58439 -o pid,lstart,command)",
+      "Bash(curl -s http://localhost:3000/vagas)",
+      "Bash(curl -s http://localhost:3000/responsaveis)",
+      "Bash(curl -s 'http://localhost:3000/funcionarios/disponiveis?vagaId=V0002&data=2026-08-21' -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(curl -s -X POST http://localhost:3000/alocacoes -H 'Content-Type: application/json' -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -d '{\"alocacoes\":[{\"vagaId\":\"V0002\",\"funcionarioId\":\"F0001\"}]}')"
     ],
     "additionalDirectories": [
       "/tmp"
