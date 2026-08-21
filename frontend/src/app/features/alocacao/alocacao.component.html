@@ -1,0 +1,164 @@
+<header class="cabecalho">
+  <a class="link-voltar-dashboard" routerLink="/dashboard">← Dashboard</a>
+  <h1>Alocação de Funcionário</h1>
+  <div class="seletor-data">
+    <button type="button" (click)="irParaDataAnterior()" aria-label="Dia anterior">←</button>
+    <input
+      type="date"
+      [value]="data()"
+      (change)="selecionarData($any($event.target).value)"
+      aria-label="Selecionar data"
+    />
+    <button type="button" (click)="irParaProximaData()" aria-label="Próximo dia">→</button>
+  </div>
+
+  @if (mostrarSeletorDeEscopo()) {
+    <select
+      class="seletor-escopo"
+      [value]="escopo()"
+      (change)="selecionarEscopo($any($event.target).value)"
+      aria-label="Filtrar sedes"
+    >
+      <option value="minha">Minhas sedes</option>
+      <option value="todas">Todas as sedes</option>
+    </select>
+  }
+</header>
+
+@switch (estadoResumo()) {
+  @case ('carregando') {
+    <p class="estado">Carregando…</p>
+  }
+  @case ('erro') {
+    <p class="estado estado--erro">Não foi possível carregar os dados. Tente novamente.</p>
+  }
+  @case ('carregado') {
+    @if (resumo(); as r) {
+      @if (!sedeSelecionada()) {
+        <!-- Passo: Sede -->
+        <section aria-label="Sedes do dia">
+          @if (r.sedes.length === 0) {
+            <p class="estado">Nenhuma vaga encontrada para esta data.</p>
+          } @else {
+            <ul class="lista-sedes">
+              @for (sede of r.sedes; track sede.sedeId) {
+                <li>
+                  <button type="button" class="sede-item" (click)="selecionarSede(sede)">
+                    <strong>{{ sede.nome }}</strong>
+                    @for (vaga of sede.vagas; track vaga.id) {
+                      <span class="sede-item__vaga">
+                        {{ vaga.tipo }} {{ vaga.alocacoesValidas }}/{{ vaga.quantidade }}
+                      </span>
+                    }
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      } @else {
+        <!-- Passos: Vagas → Funcionários → Tipo → Confirmação -->
+        <section aria-label="Detalhe da sede">
+          <button type="button" class="voltar" (click)="voltarParaSedes()">← Sedes</button>
+          <h2>{{ sedeSelecionada()!.nome }}</h2>
+
+          <div class="vagas-resumo">
+            @for (vaga of sedeSelecionada()!.vagas; track vaga.id) {
+              <div class="vaga-resumo-card">
+                <strong>{{ vaga.tipo }}</strong>
+                <span>Necessários: {{ vaga.quantidade }}</span>
+                <span>Alocados: {{ vaga.alocacoesValidas }}</span>
+                <span>Faltam: {{ vaga.disponiveis }}</span>
+                <span>Status: {{ vaga.status === 'COMPLETA' ? 'COMPLETA' : 'INCOMPLETA' }}</span>
+              </div>
+            }
+          </div>
+
+          <div class="funcionarios">
+            <h3>Funcionários disponíveis</h3>
+            <input
+              type="search"
+              placeholder="Buscar funcionário..."
+              [value]="busca()"
+              (input)="busca.set($any($event.target).value)"
+            />
+
+            @switch (estadoFuncionarios()) {
+              @case ('carregando') {
+                <p class="estado">Carregando funcionários…</p>
+              }
+              @case ('erro') {
+                <p class="estado estado--erro">Não foi possível carregar os funcionários.</p>
+              }
+              @case ('carregado') {
+                @if (funcionariosFiltrados().length === 0) {
+                  <p class="estado">Nenhum funcionário disponível para esta vaga.</p>
+                } @else {
+                  <ul class="lista-funcionarios">
+                    @for (f of funcionariosFiltrados(); track f.id) {
+                      <li
+                        class="funcionario-item"
+                        [class.funcionario-item--cancelou]="f.situacao === 'CANCELOU_NESTA_VAGA'"
+                        [class.funcionario-item--faltou]="f.situacao === 'FALTOU_NESTA_VAGA'"
+                        [class.funcionario-item--riscado]="f.situacao === 'ALOCADO_OUTRA_VAGA'"
+                        [class.funcionario-item--ja-alocado]="f.situacao === 'JA_ALOCADO_NESTA_VAGA'"
+                      >
+                        <input
+                          type="checkbox"
+                          [checked]="selecoes().has(f.id)"
+                          [disabled]="checkboxDesabilitado(f)"
+                          (change)="alternarSelecao(f, $any($event.target).checked)"
+                        />
+                        <span class="funcionario-item__nome">
+                          {{ f.nome }} - {{ f.telefone }}
+                          @switch (f.situacao) {
+                            @case ('CANCELOU_NESTA_VAGA') { <em>(Cancelou) — Indisponível para esta vaga</em> }
+                            @case ('FALTOU_NESTA_VAGA') { <em>(Faltou) — Indisponível para esta vaga</em> }
+                            @case ('ALOCADO_OUTRA_VAGA') { <em>Já alocado em outra vaga nesta data</em> }
+                            @case ('JA_ALOCADO_NESTA_VAGA') { <em>Já alocado nesta vaga</em> }
+                            @default { <em>Disponível</em> }
+                          }
+                        </span>
+                        @if (selecoes().has(f.id)) {
+                          <select
+                            [value]="selecoes().get(f.id)"
+                            (change)="selecionarTipo(f.id, $any($event.target).value)"
+                          >
+                            @for (vaga of sedeSelecionada()!.vagas; track vaga.id) {
+                              <option
+                                [value]="vaga.id"
+                                [disabled]="opcaoDesabilitada(f.id, vaga.id)"
+                              >
+                                {{ vaga.tipo }} ({{ capacidadeRestante(vaga.id, f.id) }} restante(s))
+                              </option>
+                            }
+                          </select>
+                        }
+                      </li>
+                    }
+                  </ul>
+                }
+              }
+            }
+          </div>
+
+          @if (erroEnvio()) {
+            <p class="estado estado--erro">{{ erroEnvio() }}</p>
+          }
+          @if (mensagemSucesso()) {
+            <p class="estado estado--sucesso">{{ mensagemSucesso() }}</p>
+          }
+
+          <button
+            type="button"
+            class="botao-confirmar"
+            [disabled]="!podeConfirmar() || enviando()"
+            (click)="confirmarAlocacoes()"
+          >
+            {{ enviando() ? 'Alocando…' : 'Confirmar Alocação' }}
+          </button>
+        </section>
+      }
+    }
+  }
+}

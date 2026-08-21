@@ -30,7 +30,11 @@ O responsável somente poderá alocar funcionários que estejam dentro do seu co
 
 # 3. Fluxo principal
 
-O fluxo esperado é:
+Fluxo da tela, em 6 passos:
+
+**Data → Sede → Vagas → Funcionários → Tipo (Manpower/Forklift) → Confirmação**
+
+Detalhado:
 
 ```text
 Responsável
@@ -193,34 +197,45 @@ Carlos Silva (Cancelou) - Indisponível para esta vaga
 Deverá pintar de vermelho caso tenha faltado, e amarelo caso tenha cancelado
 
 ## 12. Funcionário já alocado
-Se um funcionário já estiver alocado para uma vaga conflitante, ele não poderá ser selecionado.
+Conflito é sempre por dia: se um funcionário já estiver `ALOCADO` em outra
+vaga **na mesma data**, ele aparece riscado e não pode ser selecionado. Em
+datas diferentes, o mesmo funcionário pode ser alocado normalmente.
 Exemplo:
 João Silva: Já alocado na vaga: V0001, Não disponível
 
 ## 13. Quantidade de funcionários
-O sistema deve permitir selecionar somente a quantidade necessária.
 
-Selecionando o funcionario com o check ele vai aparecer um dropdown na direita do funcionario para escolher o tipo.
+**Alocação parcial é permitida.** Não é preciso preencher a vaga inteira
+numa única operação — por exemplo, alocar 1 dos 10 Ajudantes disponíveis é
+uma operação válida e completa por si só.
 
-O botão de confirmação só poderá ser habilitado se for selecionado a quantidade correta para a vaga.
+Selecionando o funcionário com o check aparece um dropdown à direita para
+escolher o tipo ("Manpower" ou "Forklift").
 
-Ao selecionar o funcionario deverá aparecer a direita dele o dropdown que tem "Manpower" e "Forklift".
+**O limite por tipo continua rígido**: a quantidade selecionada de um tipo
+nunca pode passar de `faltam` daquele tipo. Se só resta 1 vaga de Forklift,
+não é possível marcar 2 funcionários como Forklift, mesmo que sobrem vagas
+de Ajudante — o checkbox de novos candidatos daquele tipo é desabilitado ao
+atingir o limite.
+
+**O botão de confirmação habilita quando há pelo menos 1 funcionário
+selecionado e todas as seleções feitas são válidas** (nenhum tipo estourado,
+nenhum funcionário indisponível marcado). Não é necessário bater a
+quantidade necessária da vaga.
 
 Exemplo:
 ManPower
-Necessários: 10 
-Alocados: 8
+Necessários: 10
+Alocados: 7
+Faltam: 3
 
 Forklift
-Necessários: 1 
+Necessários: 1
 Alocados: 0
+Faltam: 1
 
-O responsável pode selecionar no máximo:
-3 funcionários
-
-Ao selecionar 3 funcionarios os botões de check que ficam a esquerda deverão ser desabilitados.
-
-Nesse exemplo deverá ser selecionado 2 Manpower e 1 Forklift para poder habilitar o botão de confirmação de alocação.
+Selecionar só 1 Manpower já habilita o botão de confirmação — não é preciso
+selecionar os 3 Manpower + 1 Forklift restantes de uma vez.
 
 ## 14. Confirmação da alocação
 Antes de criar as alocações, o sistema deve apresentar uma confirmação.
@@ -398,21 +413,19 @@ O frontend nunca deve determinar sozinho:
 A implementação da API deve seguir a arquitetura existente.
 
 Exemplo conceitual:
-Buscar funcionários disponíveis
-GET /funcionarios/disponiveis?vagaId=V001
-Criar alocação
+Buscar funcionários disponíveis (com situação por vaga/data)
+GET /funcionarios/disponiveis?vagaId=V001&data=2026-08-20
+Criar alocações em lote
 POST /alocacoes
-Body conceitual:
-[
-    {
-        "vagaId": "V001",
-        "funcionarioId": "F001",
-    },
-    {
-        "vagaId": "V002",
-        "funcionarioId": "F002",
-    }
-]
+Body:
+```json
+{
+  "alocacoes": [
+    { "vagaId": "V001", "funcionarioId": "F001" },
+    { "vagaId": "V001", "funcionarioId": "F002" }
+  ]
+}
+```
 
 O backend deve identificar o responsável através da sessão/autenticação.
 Não confiar em:
@@ -423,18 +436,19 @@ Não confiar em:
 enviado pelo frontend para determinar permissões.
 
 ## 28. Alocação em lote
-A tela pode permitir selecionar vários funcionários antes de confirmar.
+A tela permite selecionar vários funcionários antes de confirmar.
 
 Exemplo:
 3 funcionários selecionados
 
 [Confirmar Alocação]
 
-O backend deve validar cada funcionário.
-
-Se uma parte da operação falhar, o comportamento deve ser definido antes da implementação.
-
-Preferencialmente, a operação deve evitar situações parcialmente concluídas.
+**Decidido: tudo ou nada.** O backend valida **todas** as alocações do
+lote (vaga com espaço suficiente considerando os outros itens do mesmo
+lote, funcionário permitido/ativo/sem conflito) antes de gravar qualquer
+uma. Se qualquer item falhar a validação, **nada é gravado** — as linhas
+novas só são escritas na planilha depois que o lote inteiro passa, numa
+única chamada à API do Sheets, evitando alocações parcialmente concluídas.
 
 ## 29. Integração com pagamentos
 A alocação pode gerar posteriormente uma obrigação de pagamento.

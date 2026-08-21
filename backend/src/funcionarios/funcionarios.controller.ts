@@ -1,6 +1,12 @@
-import { Controller, Get, Param, Patch } from '@nestjs/common';
+import { Controller, Get, Param, Patch, Query, Req, UseGuards } from '@nestjs/common';
+import { UsuarioAutenticado } from '../auth/auth.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FuncionariosService } from './funcionarios.service';
-import { Funcionario } from './funcionario.entity';
+import { Funcionario, FuncionarioParaAlocacao } from './funcionario.entity';
+
+interface RequestComSessao {
+  user: UsuarioAutenticado;
+}
 
 @Controller('funcionarios')
 export class FuncionariosController {
@@ -11,11 +17,23 @@ export class FuncionariosController {
     return this.service.listarTodos();
   }
 
-  @Get('disponiveis/:responsavelId')
+  /**
+   * Funcionários do responsável logado, com situação por vaga/data
+   * (docs/features/alocacao.md). responsavelId sempre vem da sessão —
+   * nunca de parâmetro de URL (seção 26/27 da doc).
+   */
+  @Get('disponiveis')
+  @UseGuards(JwtAuthGuard)
   listarDisponiveis(
-    @Param('responsavelId') responsavelId: string,
-  ): Promise<Funcionario[]> {
-    return this.service.listarDisponiveisParaResponsavel(responsavelId);
+    @Query('vagaId') vagaId: string,
+    @Query('data') data: string,
+    @Req() req: RequestComSessao,
+  ): Promise<FuncionarioParaAlocacao[]> {
+    return this.service.listarParaAlocacao(
+      req.user.responsavelId ?? '',
+      vagaId,
+      data,
+    );
   }
 
   // TODO: restringir esta rota ao perfil ADMINISTRADOR (PerfisGuard).

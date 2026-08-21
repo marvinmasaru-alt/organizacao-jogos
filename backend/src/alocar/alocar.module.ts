@@ -1,0 +1,19 @@
+import { Module } from '@nestjs/common';
+import { AlocacoesModule } from '../alocacoes/alocacoes.module';
+import { FuncionariosModule } from '../funcionarios/funcionarios.module';
+import { SedesModule } from '../sedes/sedes.module';
+import { VagasModule } from '../vagas/vagas.module';
+import { AlocarController } from './alocar.controller';
+import { AlocarService } from './alocar.service';
+
+/**
+ * Módulo orquestrador da criação de alocações (POST /alocacoes) — compõe
+ * Alocacoes/Vagas/Funcionarios/Sedes sem nenhum deles precisar importar
+ * este de volta (evita ciclo, mesmo padrão do DashboardModule).
+ */
+@Module({
+  imports: [AlocacoesModule, VagasModule, FuncionariosModule, SedesModule],
+  controllers: [AlocarController],
+  providers: [AlocarService],
+})
+export class AlocarModule {}

@@ -1,7 +1,14 @@
-import { IsIn, IsNotEmpty, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsNotEmpty,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 
-/** Fluxo de criação: data -> sede/vaga -> tipo -> funcionário -> cria alocação. */
-export class CriarAlocacaoDto {
+/** Um item do lote: `responsavelFornecimentoId` nunca vem do body — é sempre a sessão. */
+export class ItemAlocacaoDto {
   @IsString()
   @IsNotEmpty()
   vagaId!: string;
@@ -9,10 +16,18 @@ export class CriarAlocacaoDto {
   @IsString()
   @IsNotEmpty()
   funcionarioId!: string;
+}
 
-  @IsString()
-  @IsNotEmpty()
-  responsavelFornecimentoId!: string;
+/**
+ * Corpo de POST /alocacoes — lote "tudo ou nada" (docs/features/alocacao.md,
+ * seção 28): `{ "alocacoes": [{ "vagaId": "...", "funcionarioId": "..." }] }`.
+ */
+export class CriarAlocacoesDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => ItemAlocacaoDto)
+  alocacoes!: ItemAlocacaoDto[];
 }
 
 export class CancelarAlocacaoDto {

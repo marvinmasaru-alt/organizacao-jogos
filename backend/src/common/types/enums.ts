@@ -13,9 +13,9 @@ export enum PerfilUsuario {
 }
 
 export enum StatusFuncionario {
+  ATIVO = 'ATIVO',
   PENDENTE = 'PENDENTE',
-  APROVADO = 'APROVADO',
-  REPROVADO = 'REPROVADO',
+  INATIVO = 'INATIVO',
 }
 
 export enum TipoTrabalho {

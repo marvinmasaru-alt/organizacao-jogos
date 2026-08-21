@@ -48,10 +48,10 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'alocacoes',
+        path: 'alocacao',
         loadComponent: () =>
-          import('./features/alocacoes/alocacoes.component').then(
-            (m) => m.AlocacoesComponent,
+          import('./features/alocacao/alocacao.component').then(
+            (m) => m.AlocacaoComponent,
           ),
       },
       {

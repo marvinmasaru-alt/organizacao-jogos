@@ -119,6 +119,13 @@
               @if (sede.localizacao) {
                 <a [href]="sede.localizacao" target="_blank" rel="noopener">📍 localização</a>
               }
+              <a
+                class="link-alocar"
+                [routerLink]="['/alocacao']"
+                [queryParams]="{ data: data(), sedeId: sede.sedeId }"
+              >
+                Alocar
+              </a>
             </h3>
             @for (vaga of sede.vagas; track vaga.id) {
               <div class="vaga-linha">

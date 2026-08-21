@@ -24,6 +24,11 @@ export class VagasService {
     return todas.filter((v) => v.data === data);
   }
 
+  async buscarPorId(id: string): Promise<Vaga | null> {
+    const todas = await this.listarTodas();
+    return todas.find((v) => v.id === id) ?? null;
+  }
+
   /**
    * Calcula disponibilidade real de cada vaga (quantidade - alocações que
    * ocupam a vaga, ver AlocacoesService), nunca negativo. Consumido pelo

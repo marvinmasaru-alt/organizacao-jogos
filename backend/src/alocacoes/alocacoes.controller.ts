@@ -1,8 +1,14 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
 import { AlocacoesService } from './alocacoes.service';
 import { Alocacao } from './alocacao.entity';
-import { CancelarAlocacaoDto, CriarAlocacaoDto } from './dto/criar-alocacao.dto';
+import { CancelarAlocacaoDto } from './dto/criar-alocacao.dto';
 
+/**
+ * Criação de alocação (POST) vive em AlocarModule — precisa de
+ * VagasService/FuncionariosService/SedesService pra validar o lote, e
+ * importar esses módulos aqui geraria dependência circular (eles já
+ * importam AlocacoesModule pra usar AlocacoesService). Ver AlocarController.
+ */
 @Controller('alocacoes')
 export class AlocacoesController {
   constructor(private readonly service: AlocacoesService) {}
@@ -12,11 +18,6 @@ export class AlocacoesController {
     return vagaId
       ? this.service.listarValidasPorVaga(vagaId)
       : this.service.listarTodas();
-  }
-
-  @Post()
-  criar(@Body() dto: CriarAlocacaoDto): Promise<Alocacao> {
-    return this.service.criar(dto);
   }
 
   @Patch(':id/cancelar')

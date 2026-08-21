@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { GoogleSheetsService } from '../common/google-sheets/google-sheets.service';
 import { StatusAlocacao } from '../common/types/enums';
 import { Alocacao } from './alocacao.entity';
-import { CriarAlocacaoDto } from './dto/criar-alocacao.dto';
 
 const SHEET_NAME = 'ALOCACOES';
 
@@ -24,6 +23,19 @@ const STATUS_QUE_OCUPAM_VAGA: StatusAlocacao[] = [StatusAlocacao.ALOCADO];
 function ehVerdadeiro(valor: string | undefined): boolean {
   const normalizado = (valor ?? '').trim().toUpperCase();
   return normalizado === 'TRUE' || normalizado === 'VERDADEIRO';
+}
+
+/**
+ * Dados mínimos pra criar uma alocação nova — sem valores/comissão (ver
+ * docs/features/alocacao.md seção 29: pagamento é integração futura) e
+ * sem `id`/`status` (gerados aqui: sempre ALOCADO, ID sequencial).
+ */
+export interface NovaAlocacaoInput {
+  vagaId: string;
+  funcionarioId: string;
+  responsavelSedeId: string;
+  responsavelFornecimentoId: string;
+  data: string;
 }
 
 @Injectable()
@@ -56,17 +68,41 @@ export class AlocacoesService {
   }
 
   /**
-   * Cria uma alocação revalidando o estado atual da vaga imediatamente
-   * antes de gravar, para evitar duas alocações simultâneas estourarem a
-   * Quantidade da vaga (condição de corrida — exigência do CLAUDE.md).
-   *
-   * TODO: implementar a revalidação de fato (reler contagem da vaga) e a
-   * gravação da nova linha via GoogleSheetsService.appendRow.
+   * Grava um lote de alocações novas numa única chamada à planilha
+   * (`appendRows` — ver GoogleSheetsService). Quem decide SE o lote pode
+   * ser gravado é o chamador (AlocarService, que já revalidou tudo antes
+   * de chegar aqui) — este método é só a escrita em si, sem validação de
+   * regra de negócio, pra não duplicar lógica entre módulos.
    */
-  async criar(dto: CriarAlocacaoDto): Promise<Alocacao> {
-    throw new Error(
-      `TODO: implementar criação de alocação para vaga ${dto.vagaId}`,
-    );
+  async gravarEmLote(itens: NovaAlocacaoInput[]): Promise<Alocacao[]> {
+    if (itens.length === 0) {
+      return [];
+    }
+
+    const proximoNumeroBase = await this.proximoNumeroDeId();
+    const novas: Alocacao[] = itens.map((item, indice) => ({
+      id: `A${String(proximoNumeroBase + indice).padStart(4, '0')}`,
+      vagaId: item.vagaId,
+      funcionarioId: item.funcionarioId,
+      responsavelSedeId: item.responsavelSedeId,
+      responsavelFornecimentoId: item.responsavelFornecimentoId,
+      data: item.data,
+      valorRecebido: 0,
+      valorFuncionario: 0,
+      comissaoTotal: 0,
+      comissaoResponsavelSede: 0,
+      comissaoResponsavelFornecimento: 0,
+      extraResponsavel: 0,
+      status: StatusAlocacao.ALOCADO,
+      dataCancelamento: null,
+      motivoCancelamento: null,
+      dataFalta: null,
+      motivoFalta: null,
+      faltaUrgente: false,
+    }));
+
+    await this.sheets.appendRows(SHEET_NAME, novas.map((a) => this.paraLinha(a)));
+    return novas;
   }
 
   /**
@@ -77,6 +113,38 @@ export class AlocacoesService {
     // TODO: reler a linha, atualizar status/data/motivo e gravar de volta.
     void id;
     void motivo;
+  }
+
+  private async proximoNumeroDeId(): Promise<number> {
+    const todas = await this.listarTodas();
+    const maiorNumero = todas.reduce((maior, a) => {
+      const numero = Number(a.id.replace(/\D/g, '')) || 0;
+      return Math.max(maior, numero);
+    }, 0);
+    return maiorNumero + 1;
+  }
+
+  private paraLinha(a: Alocacao): (string | number)[] {
+    return [
+      a.id,
+      a.vagaId,
+      a.funcionarioId,
+      a.responsavelSedeId,
+      a.responsavelFornecimentoId,
+      a.data,
+      a.valorRecebido,
+      a.valorFuncionario,
+      a.comissaoTotal,
+      a.comissaoResponsavelSede,
+      a.comissaoResponsavelFornecimento,
+      a.extraResponsavel,
+      a.status,
+      a.dataCancelamento ?? '',
+      a.motivoCancelamento ?? '',
+      a.dataFalta ?? '',
+      a.motivoFalta ?? '',
+      a.faltaUrgente ? 'TRUE' : 'FALSE',
+    ];
   }
 
   private mapearLinha(linha: string[]): Alocacao {

@@ -1,28 +1,17 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
+import { paraDataIso } from '../../core/utils/data.util';
 import { DashboardService } from './dashboard.service';
 import { DashboardResumo, EscopoSedes } from './dashboard.model';
 
 type EstadoTela = 'carregando' | 'erro' | 'vazio' | 'carregado';
 
-/**
- * Formata em YYYY-MM-DD usando os componentes LOCAIS da data — nunca usar
- * toISOString() aqui, porque ele converte pra UTC e desalinha o dia em
- * qualquer fuso diferente de UTC+0 (ex.: JST é UTC+9, então
- * toISOString() "puxava" a data pro dia anterior).
- */
-function paraDataIso(d: Date): string {
-  const ano = d.getFullYear();
-  const mes = String(d.getMonth() + 1).padStart(2, '0');
-  const dia = String(d.getDate()).padStart(2, '0');
-  return `${ano}-${mes}-${dia}`;
-}
-
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })

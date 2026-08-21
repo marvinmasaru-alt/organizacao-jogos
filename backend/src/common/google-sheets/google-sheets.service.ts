@@ -57,12 +57,29 @@ export class GoogleSheetsService {
 
   /** Anexa uma nova linha ao final de uma aba. */
   async appendRow(sheetName: string, row: (string | number)[]): Promise<void> {
+    await this.appendRows(sheetName, [row]);
+  }
+
+  /**
+   * Anexa várias linhas ao final de uma aba numa única chamada à API —
+   * base da escrita "tudo ou nada" da alocação em lote: como é uma única
+   * requisição HTTP, ou todas as linhas são gravadas, ou nenhuma é (em
+   * caso de falha de rede/API, não há como ficar "meio gravado" no meio
+   * de uma chamada só).
+   */
+  async appendRows(
+    sheetName: string,
+    rows: (string | number)[][],
+  ): Promise<void> {
+    if (rows.length === 0) {
+      return;
+    }
     const client = await this.getClient();
     await client.spreadsheets.values.append({
       spreadsheetId: this.spreadsheetId,
       range: sheetName,
       valueInputOption: 'USER_ENTERED',
-      requestBody: { values: [row] },
+      requestBody: { values: rows },
     });
   }
 
