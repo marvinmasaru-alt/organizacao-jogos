@@ -4,26 +4,23 @@ O sistema é uma aplicação web para gestão de funcionários, vagas, alocaçõ
 
 A arquitetura é baseada em quatro componentes principais:
 
-- Google Forms — entrada e cadastro de dados.
-- Google Sheets — armazenamento e fonte principal dos dados cadastrais e operacionais.
-- Backend NestJS — API, autenticação, regras de negócio, permissões e integração com Google Sheets.
+- Google Forms — entrada e cadastro de funcionários.
+- PostgreSQL (via Prisma) — armazenamento e fonte principal dos dados cadastrais e operacionais (ver `docs/SQL/create.sql`).
+- Backend NestJS — API, autenticação, regras de negócio, permissões e acesso ao banco via Prisma.
 - Frontend Web — interface utilizada pelos responsáveis para visualizar informações e realizar alocações.
 
-O sistema não possui cadastro manual de funcionários, responsáveis ou sedes pelo frontend. Esses dados são alimentados através de Google Forms.
+O sistema não possui cadastro manual de funcionários pelo frontend — esse dado é alimentado através de Google Forms (que grava direto na tabela `funcionarios`). Responsáveis e sedes são cadastrados diretamente no banco.
 
 A única operação principal de alteração realizada diretamente pelo site é a alocação de funcionários nas vagas.
 
 ## 2. Fluxo geral dos dados
                     GOOGLE FORMS
                          │
-          ┌──────────────┼──────────────┐
-          │              │              │
-          ▼              ▼              ▼
-    Funcionários    Responsáveis      Sedes
-          │              │              │
-          └──────────────┼──────────────┘
                          ▼
-                  GOOGLE SHEETS
+                  FUNCIONARIOS (tabela)
+                         │
+                         ▼
+                  POSTGRESQL (Prisma)
                          │
                          ▼
                   BACKEND NESTJS
@@ -50,19 +47,20 @@ O frontend não deve duplicar essas funcionalidades.
 
 Não criar telas no site para cadastrar funcionários, responsáveis ou sedes sem autorização explícita.
 
-### 3.2 Google Sheets
-Google Sheets funciona como a fonte de dados do sistema.
-As planilhas armazenam informações como:
+### 3.2 PostgreSQL
+PostgreSQL (acessado via Prisma) funciona como a fonte de dados do sistema.
+O banco armazena informações como:
 - funcionários;
 - responsáveis;
 - sedes;
 - vagas;
 - alocações;
+- confirmações (falta/cancelamento);
 - pagamentos.
 
-O backend é responsável por acessar as planilhas.
+O backend é responsável por acessar o banco.
 
-O frontend nunca deve acessar diretamente a API do Google Sheets.
+O frontend nunca deve acessar o banco diretamente.
 
 O fluxo obrigatório é:
 
@@ -70,7 +68,7 @@ Frontend
    ↓
 Backend
    ↓
-Google Sheets
+PostgreSQL
 ### 4. Backend
 O backend utiliza NestJS.
 Responsabilidades do backend:
@@ -79,7 +77,7 @@ gerenciamento de sessão;
 autorização;
 validação dos dados;
 aplicação das regras de negócio;
-acesso ao Google Sheets;
+acesso ao banco (PostgreSQL via Prisma);
 processamento de alocações;
 processamento de pagamentos;
 cálculo de indicadores;
@@ -98,8 +96,8 @@ backend/
 │   ├── funcionarios/
 │   ├── responsaveis/
 │   ├── sedes/
-│   └── common/
-│       └── google-sheets/
+│   └── prisma/
+│       └── prisma.service.ts
 Auth
 Responsável por:
 login;
@@ -140,22 +138,22 @@ pagamentos realizados;
 valores;
 comissão;
 controle de prazo.
-6. Google Sheets Service
-O acesso ao Google Sheets deve ser centralizado.
-Os módulos de negócio não devem implementar diretamente chamadas à API do Google Sheets.
+6. Prisma Service
+O acesso ao banco deve ser centralizado.
+Os módulos de negócio não devem instanciar PrismaClient diretamente.
 Exemplo:
 FuncionariosService
         ↓
-GoogleSheetsService
+PrismaService
         ↓
-Google Sheets API
+PostgreSQL
 e:
 AlocacoesService
         ↓
-GoogleSheetsService
+PrismaService
         ↓
-Google Sheets API
-Isso evita duplicação de código e facilita uma futura migração para outro banco de dados.
+PostgreSQL
+Isso evita duplicação de código.
 7. Frontend
 O frontend é responsável por:
 apresentar informações;
@@ -169,21 +167,18 @@ O frontend não deve implementar sozinho regras de segurança ou autorização.
 Por exemplo, esconder um funcionário da interface não significa que o usuário tenha permissão para acessá-lo.
 O backend deve validar todas as operações.
 8. Autenticação
-A autenticação utiliza Google OAuth.
+A autenticação utiliza e-mail + senha (não é mais Google OAuth — decisão revertida).
 Fluxo:
 Usuário
    ↓
-Google OAuth
-   ↓
-Backend
+Backend (valida email/senha_hash na tabela `usuarios`)
    ↓
 Identificação do usuário
    ↓
 Verificação no sistema
    ↓
-Sessão autenticada
-O Google é responsável por confirmar a identidade do usuário.
-O sistema é responsável por determinar quais recursos esse usuário pode acessar.
+Sessão autenticada (JWT)
+O sistema é responsável por confirmar a identidade do usuário e determinar quais recursos ele pode acessar.
 9. Autorização
 Autenticação e autorização são conceitos separados.
 Autenticação
@@ -263,25 +258,25 @@ se o pagamento está atrasado.
 14. Regras de arquitetura
 Regra 1 — Backend é a autoridade
 Toda regra importante deve ser validada no backend.
-Regra 2 — Frontend não acessa Google Sheets
+Regra 2 — Frontend não acessa o banco
 Sempre:
-Frontend → Backend → Google Sheets
+Frontend → Backend → PostgreSQL
 Regra 3 — Não duplicar cadastros
-Funcionários, responsáveis e sedes são cadastrados através dos Google Forms.
+Funcionários são cadastrados através dos Google Forms (gravando direto na tabela `funcionarios`).
 Regra 4 — Não apagar histórico importante
-Operações como cancelamento devem preservar histórico.
+Operações como cancelamento devem preservar histórico (`alocacoes.status`/`confirmacoes`, nunca DELETE).
 Regra 5 — Não duplicar lógica
-A lógica de acesso ao Google Sheets deve ficar centralizada.
+A lógica de acesso ao banco deve ficar centralizada no PrismaService.
 Regra 6 — Alterações pequenas
 Ao implementar uma funcionalidade, modificar somente os módulos necessários.
 Regra 7 — Segurança no backend
 Nunca confiar em IDs ou permissões enviados pelo frontend.
 15. Fases de implementação
 Fase 0 — Fundação
-Autenticação Google
+Autenticação por e-mail/senha
 Sessão/JWT
 Backend NestJS
-Integração Google Sheets
+Integração PostgreSQL via Prisma
 Status: concluída.
 Fase 1 — Dashboard
 Vagas do dia

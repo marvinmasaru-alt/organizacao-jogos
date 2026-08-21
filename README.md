@@ -539,7 +539,7 @@ devem preservar histórico.
 A regra geral é:
 Alterar o status do registro é preferível a apagar o registro.
 
-Isso será especialmente importante quando o sistema deixar de usar somente Google Sheets e passar para um banco de dados real.
+Isso é especialmente importante agora que o sistema usa um banco de dados relacional (PostgreSQL via Prisma) — ver docs/SQL/create.sql.
 46. Estrutura conceitual das entidades
 O sistema atualmente gira em torno destas entidades:
 RESPONSAVEIS

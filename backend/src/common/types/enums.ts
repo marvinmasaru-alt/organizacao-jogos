@@ -1,48 +1,26 @@
 /**
- * Enums de status compartilhados entre módulos.
- *
- * ⚠️ CLAUDE.md marca a lista oficial e fechada de status como ponto em
- * aberto — os valores abaixo são um rascunho inicial coerente com as regras
- * de negócio já descritas, não devem ser tratados como definitivos até
- * confirmação.
+ * Enums de negócio que não vêm do Prisma (não existem como coluna/enum no
+ * banco). Os enums que espelham `docs/SQL/create.sql`
+ * (StatusFuncionario, TipoTrabalho, StatusVaga, StatusAlocacao,
+ * StatusConfirmacao, TipoUsuario, TipoSede, StatusPagamento, ...) vêm
+ * direto de `@prisma/client` — nunca duplicar aqui, pra não ter duas
+ * fontes de verdade divergindo.
  */
 
+/** Perfil resolvido no login (JWT claim) — não é uma tabela, é derivado de `usuarios.tipo`. */
 export enum PerfilUsuario {
   ADMINISTRADOR = 'ADMINISTRADOR',
   RESPONSAVEL = 'RESPONSAVEL',
 }
 
-export enum StatusFuncionario {
-  ATIVO = 'ATIVO',
-  PENDENTE = 'PENDENTE',
-  INATIVO = 'INATIVO',
-}
-
-/** Valor literal — é exatamente o que está gravado na coluna Tipo da aba VAGAS na planilha. */
-export enum TipoTrabalho {
-  MANPOWER = 'Manpower',
-  FORKLIFT = 'Forklift',
-}
-
-export enum StatusVaga {
-  ABERTA = 'ABERTA',
-  COMPLETA = 'COMPLETA',
-}
-
-export enum StatusAlocacao {
-  ALOCADO = 'ALOCADO',
-  CANCELADO = 'CANCELADO',
-  FALTOU = 'FALTOU',
-}
-
-export enum StatusFalta {
-  REGISTRADA = 'REGISTRADA',
-  URGENTE = 'URGENTE_SUBSTITUICAO',
-}
-
-export enum StatusPagamento {
+/**
+ * Indicador visual de prazo de pagamento (🟢/🟡/🔴 — CLAUDE.md). Calculado
+ * em memória a partir da data do trabalho, nunca gravado no banco — não
+ * confundir com `StatusPagamento` do Prisma (PENDENTE/PAGO/CANCELADO), que
+ * é o status persistido em `pagamentos.status`.
+ */
+export enum StatusPrazoPagamento {
   NO_PRAZO = 'NO_PRAZO',
   PROXIMO_VENCIMENTO = 'PROXIMO_VENCIMENTO',
   VENCIDO = 'VENCIDO',
-  PAGO = 'PAGO',
 }

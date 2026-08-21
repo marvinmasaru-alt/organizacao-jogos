@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { GoogleSheetsModule } from './common/google-sheets/google-sheets.module';
+import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { ResponsaveisModule } from './responsaveis/responsaveis.module';
 import { FuncionariosModule } from './funcionarios/funcionarios.module';
@@ -16,7 +16,7 @@ import { HistoricoModule } from './historico/historico.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    GoogleSheetsModule,
+    PrismaModule,
     AuthModule,
     ResponsaveisModule,
     FuncionariosModule,

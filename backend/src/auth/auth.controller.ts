@@ -11,7 +11,7 @@ interface RequestComSessao {
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  /** Login por e-mail + senha (aba RESPONSAVEIS, coluna Senha). */
+  /** Login por e-mail + senha (tabela usuarios, senha_hash com bcrypt). */
   @Post('login')
   async login(
     @Body() dto: LoginDto,

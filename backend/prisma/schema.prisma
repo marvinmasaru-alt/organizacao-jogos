@@ -1,0 +1,303 @@
+// Espelha docs/SQL/create.sql. Nomes de tabela/coluna continuam snake_case
+// no Postgres (via @@map/@map); os campos do Prisma Client ficam camelCase,
+// mesma convenção que os antigos *.entity.ts já usavam.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TipoUsuario {
+  ADMIN
+  RESPONSAVEL
+
+  @@map("tipo_usuario")
+}
+
+enum StatusFuncionario {
+  PENDENTE
+  APROVADO
+  BLOQUEADO
+  INATIVO
+
+  @@map("status_funcionario")
+}
+
+enum TipoSede {
+  HUB
+  EXTERNA
+
+  @@map("tipo_sede")
+}
+
+enum TipoModeloVaga {
+  FIXA
+  ESPORADICA
+
+  @@map("tipo_modelo_vaga")
+}
+
+enum StatusVaga {
+  ABERTA
+  INCOMPLETA
+  COMPLETA
+  CANCELADA
+
+  @@map("status_vaga")
+}
+
+enum TipoTrabalho {
+  MANPOWER
+  FORKLIFT
+
+  @@map("tipo_trabalho")
+}
+
+enum StatusAlocacao {
+  ATIVA
+  CANCELADA
+
+  @@map("status_alocacao")
+}
+
+enum StatusConfirmacao {
+  PENDENTE
+  PRESENTE
+  FALTOU
+  CANCELOU
+  SUBSTITUICAO_NECESSARIA
+
+  @@map("status_confirmacao")
+}
+
+enum StatusPagamento {
+  PENDENTE
+  PAGO
+  CANCELADO
+
+  @@map("status_pagamento")
+}
+
+model Usuario {
+  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome       String      @db.VarChar(255)
+  email      String      @unique @db.VarChar(255)
+  senhaHash  String      @map("senha_hash")
+  tipo       TipoUsuario
+  ativo      Boolean     @default(true)
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @default(now()) @updatedAt @map("updated_at")
+
+  responsavel        Responsavel?
+  confirmacoesFeitas  Confirmacao[] @relation("ConfirmadoPor")
+
+  @@map("usuarios")
+}
+
+model Responsavel {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuarioId          String?   @unique @map("usuario_id") @db.Uuid
+  nome               String    @db.VarChar(255)
+  email              String    @unique @db.VarChar(255)
+  senhaDistribuicao  String    @map("senha_distribuicao") @db.VarChar(255)
+  ativo              Boolean   @default(true)
+  deletedAt          DateTime? @map("deleted_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  usuario      Usuario?      @relation(fields: [usuarioId], references: [id])
+  funcionarios Funcionario[]
+  sedes        Sede[]
+  alocacoes    Alocacao[]
+  pagamentos   Pagamento[]
+
+  @@map("responsaveis")
+}
+
+model Funcionario {
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  responsavelId  String            @map("responsavel_id") @db.Uuid
+  nome           String            @db.VarChar(255)
+  telefone       String?           @db.VarChar(50)
+  provincia      String?           @db.VarChar(100)
+  codigoPostal   String?           @map("codigo_postal") @db.VarChar(20)
+  documentoUrl   String?           @map("documento_url")
+  status         StatusFuncionario @default(PENDENTE)
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @default(now()) @updatedAt @map("updated_at")
+
+  responsavel Responsavel @relation(fields: [responsavelId], references: [id])
+  alocacoes   Alocacao[]
+  pagamentos  Pagamento[]
+
+  @@index([responsavelId], map: "idx_funcionarios_responsavel")
+  @@map("funcionarios")
+}
+
+model Sede {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sigla          String    @unique @db.VarChar(50)
+  nome           String    @db.VarChar(255)
+  endereco       String?
+  tipoSede       TipoSede  @map("tipo_sede")
+  cluster        String?
+  responsavelId  String?   @map("responsavel_id") @db.Uuid
+  ativo          Boolean   @default(true)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  responsavel  Responsavel?  @relation(fields: [responsavelId], references: [id])
+  modelosVagas ModeloVaga[]
+  vagas        Vaga[]
+
+  @@map("sedes")
+}
+
+model ModeloVaga {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sedeId      String         @map("sede_id") @db.Uuid
+  nome        String         @db.VarChar(255)
+  tipo        TipoModeloVaga
+  ativo       Boolean        @default(true)
+  observacao  String?
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @default(now()) @updatedAt @map("updated_at")
+
+  sede  Sede                @relation(fields: [sedeId], references: [id])
+  dias  ModeloVagaDia[]
+  tipos ModeloVagaTipo[]
+  vagas Vaga[]
+
+  @@map("modelos_vagas")
+}
+
+model ModeloVagaDia {
+  id            String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  modeloVagaId  String @map("modelo_vaga_id") @db.Uuid
+  diaSemana     Int    @map("dia_semana")
+
+  modeloVaga ModeloVaga @relation(fields: [modeloVagaId], references: [id], onDelete: Cascade)
+
+  @@map("modelo_vaga_dias")
+}
+
+model ModeloVagaTipo {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  modeloVagaId  String       @map("modelo_vaga_id") @db.Uuid
+  tipoTrabalho  TipoTrabalho @map("tipo_trabalho")
+  quantidade    Int
+
+  modeloVaga ModeloVaga @relation(fields: [modeloVagaId], references: [id], onDelete: Cascade)
+
+  @@map("modelo_vaga_tipos")
+}
+
+model Vaga {
+  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sedeId        String     @map("sede_id") @db.Uuid
+  modeloVagaId  String?    @map("modelo_vaga_id") @db.Uuid
+  data          DateTime   @db.Date
+  status        StatusVaga @default(ABERTA)
+  observacao    String?
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @default(now()) @updatedAt @map("updated_at")
+
+  sede       Sede        @relation(fields: [sedeId], references: [id])
+  modeloVaga ModeloVaga? @relation(fields: [modeloVagaId], references: [id])
+  tipos      VagaTipo[]
+  alocacoes  Alocacao[]
+
+  @@index([data], map: "idx_vagas_data")
+  @@index([sedeId], map: "idx_vagas_sede")
+  @@map("vagas")
+}
+
+model VagaTipo {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vagaId        String       @map("vaga_id") @db.Uuid
+  tipoTrabalho  TipoTrabalho @map("tipo_trabalho")
+  quantidade    Int
+
+  vaga Vaga @relation(fields: [vagaId], references: [id], onDelete: Cascade)
+
+  @@map("vaga_tipos")
+}
+
+model Alocacao {
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vagaId         String          @map("vaga_id") @db.Uuid
+  funcionarioId  String          @map("funcionario_id") @db.Uuid
+  responsavelId  String          @map("responsavel_id") @db.Uuid
+  tipoTrabalho   TipoTrabalho    @map("tipo_trabalho")
+  status         StatusAlocacao  @default(ATIVA)
+  dataAlocacao   DateTime        @default(now()) @map("data_alocacao")
+  observacao     String?
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @default(now()) @updatedAt @map("updated_at")
+
+  vaga         Vaga         @relation(fields: [vagaId], references: [id])
+  funcionario  Funcionario  @relation(fields: [funcionarioId], references: [id])
+  responsavel  Responsavel  @relation(fields: [responsavelId], references: [id])
+  confirmacao  Confirmacao?
+  pagamento    Pagamento?
+
+  @@index([funcionarioId], map: "idx_alocacoes_funcionario")
+  @@index([vagaId], map: "idx_alocacoes_vaga")
+  @@map("alocacoes")
+}
+
+model Confirmacao {
+  id             String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  alocacaoId     String             @unique @map("alocacao_id") @db.Uuid
+  status         StatusConfirmacao  @default(PENDENTE)
+  observacao     String?
+  confirmadoPor  String?            @map("confirmado_por") @db.Uuid
+  confirmadoEm   DateTime?          @map("confirmado_em")
+  createdAt      DateTime           @default(now()) @map("created_at")
+
+  alocacao          Alocacao @relation(fields: [alocacaoId], references: [id])
+  confirmadoPorUsuario Usuario? @relation("ConfirmadoPor", fields: [confirmadoPor], references: [id])
+
+  @@map("confirmacoes")
+}
+
+model TabelaValor {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tipoTrabalho   TipoTrabalho  @map("tipo_trabalho")
+  tipoSede       TipoSede      @map("tipo_sede")
+  valor          Decimal       @db.Decimal(10, 2)
+  dataInicio     DateTime?     @map("data_inicio") @db.Date
+  dataFim        DateTime?     @map("data_fim") @db.Date
+  ativo          Boolean       @default(true)
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @default(now()) @updatedAt @map("updated_at")
+
+  @@map("tabela_valores")
+}
+
+model Pagamento {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tipo           String?          @db.VarChar(100)
+  responsavelId  String           @map("responsavel_id") @db.Uuid
+  alocacaoId     String           @unique @map("alocacao_id") @db.Uuid
+  funcionarioId  String           @map("funcionario_id") @db.Uuid
+  valor          Decimal          @db.Decimal(10, 2)
+  dataPrevista   DateTime?        @map("data_prevista") @db.Date
+  dataPagamento  DateTime?        @map("data_pagamento") @db.Date
+  status         StatusPagamento  @default(PENDENTE)
+  statusPrazo    String?          @map("status_prazo") @db.VarChar(50)
+  observacao     String?
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @default(now()) @updatedAt @map("updated_at")
+
+  responsavel  Responsavel  @relation(fields: [responsavelId], references: [id])
+  alocacao     Alocacao     @relation(fields: [alocacaoId], references: [id])
+  funcionario  Funcionario  @relation(fields: [funcionarioId], references: [id])
+
+  @@index([status], map: "idx_pagamentos_status")
+  @@map("pagamentos")
+}

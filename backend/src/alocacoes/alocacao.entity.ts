@@ -1,33 +1,28 @@
-import { StatusAlocacao } from '../common/types/enums';
+import { StatusAlocacao, TipoTrabalho } from '@prisma/client';
 
 /**
- * Espelha a aba ALOCACOES.
- * Responsavel_Sede_ID e Responsavel_Fornecimento_ID são sempre guardados
- * separadamente: são papéis independentes, mesmo que na prática atual a
- * mesma pessoa costume exercer os dois.
+ * Espelha a tabela `alocacoes` (docs/SQL/create.sql), com dois campos
+ * calculados na leitura (nunca gravados na própria linha):
+ *  - `data`: dia do trabalho, vem de `vagas.data` (join) — a tabela não
+ *    tem coluna própria de data, só `data_alocacao` (timestamp de quando o
+ *    registro foi criado, não o dia trabalhado).
+ *  - `responsavelSedeId`: vem de `vagas.sede_id -> sedes.responsavel_id`
+ *    (join). `responsavelId` (coluna real da tabela) é sempre o
+ *    responsável pelo FORNECIMENTO (quem alocou) — decisão confirmada, já
+ *    que o schema só tem uma FK de responsável na tabela.
  *
- * Falta vive dentro desta mesma tabela (Status = FALTOU +
- * Data_Falta/Motivo_Falta/Falta_Urgente), não numa aba separada — decisão
- * confirmada que substitui a seção "Faltas" mais antiga do CLAUDE.md.
+ * Falta/cancelamento não vivem mais aqui — ver `Confirmacao`
+ * (tabela `confirmacoes`, 1:1 com esta), que guarda status
+ * PENDENTE/PRESENTE/FALTOU/CANCELOU/SUBSTITUICAO_NECESSARIA + observação.
  */
 export interface Alocacao {
   id: string;
-  vagaId: string;
+  vagaId: string; // vagas.id real
+  vagaTipoId: string; // vaga_tipos.id — o "vagaId" usado no resto da API
   funcionarioId: string;
-  responsavelSedeId: string;
   responsavelFornecimentoId: string;
-  data: string;
-  valorRecebido: number;
-  valorFuncionario: number;
-  comissaoTotal: number;
-  comissaoResponsavelSede: number;
-  comissaoResponsavelFornecimento: number;
-  extraResponsavel: number;
+  responsavelSedeId: string;
+  tipoTrabalho: TipoTrabalho;
+  data: string; // ISO date, de vagas.data
   status: StatusAlocacao;
-  dataCancelamento: string | null;
-  motivoCancelamento: string | null;
-  dataFalta: string | null;
-  motivoFalta: string | null;
-  /** Sinaliza pendência no Dashboard sem nunca expor quem faltou. */
-  faltaUrgente: boolean;
 }

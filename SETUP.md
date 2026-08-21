@@ -3,7 +3,7 @@
 Este repositório é um monorepo com dois workspaces:
 
 ```
-backend/    API NestJS (TypeScript) — lê/escreve no Google Sheets
+backend/    API NestJS (TypeScript) — lê/escreve no PostgreSQL via Prisma
 frontend/   SPA Angular (TypeScript) — client-side puro, mobile-first
 ```
 
@@ -12,9 +12,8 @@ decisões de arquitetura/stack em [CLAUDE.md](CLAUDE.md).
 
 ## Pré-requisitos
 
-- Node.js LTS (18+) e npm — **não detectados neste ambiente**, então as
-  dependências ainda não foram instaladas nem os builds testados. Instale o
-  Node antes do próximo passo.
+- Node.js LTS (18+) e npm.
+- Um banco PostgreSQL acessível (local ou hospedado, ex.: Railway).
 
 ## Instalação
 
@@ -26,18 +25,31 @@ npm install
 
 ## Configuração (fora do código)
 
-Antes da integração com o Google Sheets funcionar, siga os passos da
-seção "Setup inicial necessário" do [CLAUDE.md](CLAUDE.md#setup-inicial-necessário-fora-do-código)
-(criar projeto no Google Cloud, Service Account). O login dos usuários é
-e-mail + senha (aba `RESPONSAVEIS`), não depende de credencial Google.
-
-Depois, copie o arquivo de exemplo e preencha os valores:
+Copie o arquivo de exemplo e preencha os valores:
 
 ```bash
 cp backend/.env.example backend/.env
 ```
 
-`.env` nunca deve ser commitado — já está no `.gitignore`.
+Preencha pelo menos `DATABASE_URL` (string de conexão do Postgres) e
+`JWT_SECRET`. `.env` nunca deve ser commitado — já está no `.gitignore`.
+
+Depois, aplique o schema no banco e crie o Administrador:
+
+```bash
+npm run prisma:migrate --workspace=backend   # cria/atualiza as tabelas (dev)
+npm run prisma:seed --workspace=backend      # cria o usuário Administrador
+                                              # (usa ADMIN_EMAIL/ADMIN_PASSWORD do .env)
+```
+
+Em produção, o start do backend já roda `prisma migrate deploy` antes de
+subir (ver `backend/package.json`, script `start:prod`) — só é preciso
+rodar o seed manualmente uma vez.
+
+O login dos usuários é sempre e-mail + senha (tabela `usuarios`), nunca
+depende de credencial Google — a única integração com Google que resta é o
+Forms de cadastro de funcionários, que grava direto na tabela
+`funcionarios`.
 
 ## Rodando em desenvolvimento
 
@@ -48,10 +60,8 @@ npm run frontend:dev   # SPA em http://localhost:4200
 
 ## Estado atual
 
-Este é o esqueleto inicial da estrutura (módulos, controllers, services,
-rotas e entidades já organizados pelos domínios descritos no CLAUDE.md).
-A maior parte dos métodos de service tem `TODO`s explícitos onde a lógica
-de leitura/escrita na planilha e cálculo de comissões ainda precisa ser
-implementada — várias dessas partes dependem de decisões listadas como
-"pontos em aberto" no CLAUDE.md. Login (e-mail + senha) já está
-implementado de ponta a ponta.
+Backend e frontend implementam os módulos descritos no CLAUDE.md
+(Autenticação, Funcionários, Responsáveis, Sedes, Vagas, Dashboard,
+Alocações, Faltas/Confirmações, Histórico) sobre PostgreSQL via Prisma.
+Cálculo de comissão e geração automática de vagas fixas (`modelos_vagas`)
+ainda não estão implementados — ver "Pontos ainda em aberto" no CLAUDE.md.

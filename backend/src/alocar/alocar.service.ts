@@ -5,16 +5,16 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { StatusFuncionario } from '@prisma/client';
 import {
   AlocacoesService,
   NovaAlocacaoInput,
 } from '../alocacoes/alocacoes.service';
 import { Alocacao } from '../alocacoes/alocacao.entity';
 import { UsuarioAutenticado } from '../auth/auth.service';
-import { PerfilUsuario, StatusAlocacao, StatusFuncionario } from '../common/types/enums';
+import { PerfilUsuario } from '../common/types/enums';
 import { ItemAlocacaoDto } from '../alocacoes/dto/criar-alocacao.dto';
 import { FuncionariosService } from '../funcionarios/funcionarios.service';
-import { SedesService } from '../sedes/sedes.service';
 import { Vaga } from '../vagas/vaga.entity';
 import { VagasService } from '../vagas/vagas.service';
 
@@ -26,9 +26,14 @@ import { VagasService } from '../vagas/vagas.service';
  * FuncionariosModule importam AlocacoesModule pra usar AlocacoesService
  * (mesmo padrão que DashboardModule já usa pra compor os três).
  *
- * Lote é tudo ou nada: todo item é revalidado com dados frescos da
- * planilha antes de qualquer escrita; se um item falhar, nada é gravado
- * (AlocacoesService.gravarEmLote só é chamado depois que todo o lote passa).
+ * Lote é tudo ou nada: todo item é revalidado com dados frescos do banco
+ * antes de qualquer escrita; se um item falhar, nada é gravado
+ * (AlocacoesService.gravarEmLote só é chamado depois que todo o lote passa,
+ * e grava tudo numa única transação Prisma).
+ *
+ * `item.vagaId` (do DTO) é sempre o `vaga_tipos.id` — a identidade que o
+ * resto da API usa pra "vaga" (ver vaga.entity.ts). Aqui é resolvido pro
+ * par real `(vagas.id, tipoTrabalho)` antes de gravar em `alocacoes`.
  */
 @Injectable()
 export class AlocarService {
@@ -36,7 +41,6 @@ export class AlocarService {
     private readonly alocacoesService: AlocacoesService,
     private readonly vagasService: VagasService,
     private readonly funcionariosService: FuncionariosService,
-    private readonly sedesService: SedesService,
   ) {}
 
   async criarEmLote(
@@ -51,11 +55,6 @@ export class AlocarService {
 
     const vagasMap = await this.carregarVagas(itens);
     this.validarCapacidadePorVaga(itens, await this.calcularDisponibilidade(vagasMap));
-
-    const todasAlocacoes = await this.alocacoesService.listarTodas();
-    const sedesResponsavelMap = await this.carregarResponsaveisDasSedes(
-      vagasMap,
-    );
 
     const funcionariosUsados = new Set<string>();
     const novasAlocacoes: NovaAlocacaoInput[] = [];
@@ -78,23 +77,25 @@ export class AlocarService {
           `Funcionário ${item.funcionarioId} não encontrado.`,
         );
       }
-      if (funcionario.responsavelCadastroId !== usuario.responsavelId) {
+      if (funcionario.responsavelId !== usuario.responsavelId) {
         throw new ForbiddenException(
           `Você não tem permissão para usar o funcionário ${funcionario.nome}.`,
         );
       }
-      if (funcionario.status !== StatusFuncionario.ATIVO) {
+      if (funcionario.status !== StatusFuncionario.APROVADO) {
         throw new BadRequestException(
-          `Funcionário ${funcionario.nome} não está ativo.`,
+          `Funcionário ${funcionario.nome} não está aprovado.`,
         );
       }
 
-      const conflitoOutraVaga = todasAlocacoes.some(
-        (a) =>
-          a.funcionarioId === funcionario.id &&
-          a.data === vaga.data &&
-          a.status === StatusAlocacao.ALOCADO &&
-          a.vagaId !== item.vagaId,
+      const alocacoesDoDia =
+        await this.alocacoesService.listarAtivasPorFuncionarioEData(
+          funcionario.id,
+          vaga.data,
+        );
+
+      const conflitoOutraVaga = alocacoesDoDia.some(
+        (a) => a.vagaTipoId !== item.vagaId,
       );
       if (conflitoOutraVaga) {
         throw new ConflictException(
@@ -102,11 +103,8 @@ export class AlocarService {
         );
       }
 
-      const jaAlocadoNestaVaga = todasAlocacoes.some(
-        (a) =>
-          a.funcionarioId === funcionario.id &&
-          a.vagaId === item.vagaId &&
-          a.status === StatusAlocacao.ALOCADO,
+      const jaAlocadoNestaVaga = alocacoesDoDia.some(
+        (a) => a.vagaTipoId === item.vagaId,
       );
       if (jaAlocadoNestaVaga) {
         throw new ConflictException(
@@ -115,11 +113,10 @@ export class AlocarService {
       }
 
       novasAlocacoes.push({
-        vagaId: vaga.id,
+        vagaId: vaga.vagaRealId,
+        tipoTrabalho: vaga.tipo,
         funcionarioId: funcionario.id,
-        responsavelSedeId: sedesResponsavelMap.get(vaga.sedeId) ?? '',
         responsavelFornecimentoId: usuario.responsavelId,
-        data: vaga.data,
       });
     }
 
@@ -173,20 +170,5 @@ export class AlocarService {
         );
       }
     }
-  }
-
-  private async carregarResponsaveisDasSedes(
-    vagasMap: Map<string, Vaga>,
-  ): Promise<Map<string, string>> {
-    const sedeIds = [...new Set([...vagasMap.values()].map((v) => v.sedeId))];
-    const sedeResponsavelMap = new Map<string, string>();
-    for (const sedeId of sedeIds) {
-      const sede = await this.sedesService.buscarPorId(sedeId);
-      if (!sede) {
-        throw new NotFoundException(`Sede ${sedeId} não encontrada.`);
-      }
-      sedeResponsavelMap.set(sedeId, sede.responsavelId);
-    }
-    return sedeResponsavelMap;
   }
 }

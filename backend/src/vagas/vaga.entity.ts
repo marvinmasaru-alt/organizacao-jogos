@@ -1,9 +1,21 @@
-import { StatusVaga, TipoTrabalho } from '../common/types/enums';
+import { StatusVaga, TipoTrabalho } from '@prisma/client';
 
-/** Espelha a aba VAGAS da planilha. */
+/**
+ * No banco, `vagas` (um dia+sede) e `vaga_tipos` (tipo+quantidade daquele
+ * dia) são tabelas separadas — uma vaga pode ter várias linhas de tipo
+ * (ex.: 4 Manpower + 2 Forklift no mesmo dia/sede). O resto do app (e o
+ * frontend) sempre tratou "vaga" como um par único sede+data+tipo+
+ * quantidade com um `id` só — pra não precisar reescrever essas camadas,
+ * cada linha de `vaga_tipos` é exposta aqui como se fosse a antiga `Vaga`
+ * plana: `id` = `vaga_tipos.id` (é o identificador usado em toda a API,
+ * inclusive nas rotas de alocação). `vagaRealId` é o `vagas.id` de
+ * verdade, usado só internamente (AlocarService) pra gravar
+ * `alocacoes.vaga_id`.
+ */
 export interface Vaga {
-  id: string;
-  data: string; // ISO date
+  id: string; // vaga_tipos.id
+  vagaRealId: string; // vagas.id
+  data: string; // ISO date (vagas.data)
   sedeId: string;
   tipo: TipoTrabalho;
   quantidade: number;

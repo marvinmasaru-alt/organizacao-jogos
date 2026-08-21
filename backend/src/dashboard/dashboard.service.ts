@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
+import { StatusVaga } from '@prisma/client';
 import { AlocacoesService } from '../alocacoes/alocacoes.service';
-import { PerfilUsuario, StatusVaga } from '../common/types/enums';
+import { PerfilUsuario } from '../common/types/enums';
 import { SedesService } from '../sedes/sedes.service';
 import { VagasService } from '../vagas/vagas.service';
 import { UsuarioAutenticado } from '../auth/auth.service';
@@ -52,13 +53,13 @@ export class DashboardService {
 
     const faltasUrgentes = (
       await this.alocacoesService.listarFaltasUrgentesPorData(data)
-    ).filter((a) => vagaIdsDoDia.has(a.vagaId));
+    ).filter((a) => vagaIdsDoDia.has(a.vagaTipoId));
 
     const siglaPorSedeId = new Map(sedes.map((s) => [s.id, s.sigla]));
 
     const sedeIdsComFaltaUrgente = new Set(
       faltasUrgentes.map((a) => {
-        const vaga = vagasComDisponibilidade.find((v) => v.id === a.vagaId);
+        const vaga = vagasComDisponibilidade.find((v) => v.id === a.vagaTipoId);
         return vaga?.sedeId;
       }),
     );
@@ -66,8 +67,8 @@ export class DashboardService {
     const substituicoesUrgentesPorVagaId = new Map<string, number>();
     for (const falta of faltasUrgentes) {
       substituicoesUrgentesPorVagaId.set(
-        falta.vagaId,
-        (substituicoesUrgentesPorVagaId.get(falta.vagaId) ?? 0) + 1,
+        falta.vagaTipoId,
+        (substituicoesUrgentesPorVagaId.get(falta.vagaTipoId) ?? 0) + 1,
       );
     }
 
@@ -89,7 +90,10 @@ export class DashboardService {
         return {
           sedeId: sede.id,
           nome: sede.nome,
-          localizacao: sede.localizacao,
+          // Contrato da API mantém o nome "localizacao" pro frontend, mesmo
+          // vindo de sedes.endereco (schema novo não tem coluna separada
+          // de link do Maps — ver docs/SQL/create.sql).
+          localizacao: sede.endereco,
           urgente: sedeIdsComFaltaUrgente.has(sede.id),
           // Só "completa" quando a sede tem vaga no dia e todas estão preenchidas.
           completa:
@@ -143,9 +147,9 @@ export class DashboardService {
           .sort((a, b) => a.sedeSigla.localeCompare(b.sedeSigla)),
         substituicoesUrgentes: faltasUrgentes
           .map((a) => {
-            const vaga = vagasComDisponibilidade.find((v) => v.id === a.vagaId);
+            const vaga = vagasComDisponibilidade.find((v) => v.id === a.vagaTipoId);
             return {
-              vagaId: a.vagaId,
+              vagaId: a.vagaTipoId,
               sedeSigla: siglaPorSedeId.get(vaga?.sedeId ?? '') ?? '',
               tipo: vaga?.tipo ?? '',
               faltam: vaga?.disponiveis ?? 0,

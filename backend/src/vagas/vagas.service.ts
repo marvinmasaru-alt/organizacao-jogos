@@ -1,32 +1,39 @@
 import { Injectable } from '@nestjs/common';
-import { GoogleSheetsService } from '../common/google-sheets/google-sheets.service';
+import { Prisma, StatusVaga } from '@prisma/client';
 import { AlocacoesService } from '../alocacoes/alocacoes.service';
-import { StatusVaga, TipoTrabalho } from '../common/types/enums';
+import { PrismaService } from '../prisma/prisma.service';
 import { Vaga, VagaComDisponibilidade } from './vaga.entity';
 
-const SHEET_NAME = 'VAGAS';
+const INCLUDE = { vaga: true } satisfies Prisma.VagaTipoInclude;
+type VagaTipoComVaga = Prisma.VagaTipoGetPayload<{ include: typeof INCLUDE }>;
 
 @Injectable()
 export class VagasService {
   constructor(
-    private readonly sheets: GoogleSheetsService,
+    private readonly prisma: PrismaService,
     private readonly alocacoesService: AlocacoesService,
   ) {}
 
   async listarTodas(): Promise<Vaga[]> {
-    const linhas = await this.sheets.readSheet(SHEET_NAME);
-    // Linha 1 é cabeçalho (ID, Data, Sede_ID, Tipo, Quantidade, Status).
-    return linhas.slice(1).map((linha) => this.mapearLinha(linha));
+    const tipos = await this.prisma.vagaTipo.findMany({ include: INCLUDE });
+    return tipos.map((t) => this.mapear(t));
   }
 
   async listarPorData(data: string): Promise<Vaga[]> {
-    const todas = await this.listarTodas();
-    return todas.filter((v) => v.data === data);
+    const tipos = await this.prisma.vagaTipo.findMany({
+      where: { vaga: { data: new Date(data) } },
+      include: INCLUDE,
+    });
+    return tipos.map((t) => this.mapear(t));
   }
 
+  /** `id` aqui é sempre o `vaga_tipos.id` — ver comentário em vaga.entity.ts. */
   async buscarPorId(id: string): Promise<Vaga | null> {
-    const todas = await this.listarTodas();
-    return todas.find((v) => v.id === id) ?? null;
+    const tipo = await this.prisma.vagaTipo.findUnique({
+      where: { id },
+      include: INCLUDE,
+    });
+    return tipo ? this.mapear(tipo) : null;
   }
 
   /**
@@ -39,9 +46,11 @@ export class VagasService {
   ): Promise<VagaComDisponibilidade[]> {
     return Promise.all(
       vagas.map(async (v) => {
-        const alocacoesValidas = (
-          await this.alocacoesService.listarValidasPorVaga(v.id)
-        ).length;
+        const alocacoesValidas =
+          await this.alocacoesService.contarValidasPorVagaRealETipo(
+            v.vagaRealId,
+            v.tipo,
+          );
         const disponiveis = Math.max(0, v.quantidade - alocacoesValidas);
         return {
           ...v,
@@ -53,15 +62,15 @@ export class VagasService {
     );
   }
 
-  private mapearLinha(linha: string[]): Vaga {
-    const [id, data, sedeId, tipo, quantidade, status] = linha;
+  private mapear(t: VagaTipoComVaga): Vaga {
     return {
-      id: id ?? '',
-      data: data ?? '',
-      sedeId: sedeId ?? '',
-      tipo: (tipo as TipoTrabalho) || TipoTrabalho.MANPOWER,
-      quantidade: Number(quantidade) || 0,
-      status: (status as StatusVaga) || StatusVaga.ABERTA,
+      id: t.id,
+      vagaRealId: t.vagaId,
+      data: t.vaga.data.toISOString().slice(0, 10),
+      sedeId: t.vaga.sedeId,
+      tipo: t.tipoTrabalho,
+      quantidade: t.quantidade,
+      status: t.vaga.status,
     };
   }
 }
