@@ -10,7 +10,7 @@ export class SedesService {
 
   async listarTodas(): Promise<Sede[]> {
     const linhas = await this.sheets.readSheet(SHEET_NAME);
-    // Linha 1 é cabeçalho (ID, Nome, Tipo_Sede, Responsável_ID, Status, Localizacao).
+    // Linha 1 é cabeçalho (ID, Nome, Tipo_Sede, Responsável_ID, Status, Localizacao, Sigla).
     return linhas.slice(1).map((linha) => this.mapearLinha(linha));
   }
 
@@ -26,7 +26,8 @@ export class SedesService {
   }
 
   private mapearLinha(linha: string[]): Sede {
-    const [id, nome, tipoSede, responsavelId, status, localizacao] = linha;
+    const [id, nome, tipoSede, responsavelId, status, localizacao, sigla] =
+      linha;
     return {
       id: id ?? '',
       nome: nome ?? '',
@@ -34,6 +35,7 @@ export class SedesService {
       responsavelId: responsavelId ?? '',
       status: status ?? '',
       localizacao: localizacao ?? '',
+      sigla: sigla ?? '',
     };
   }
 }

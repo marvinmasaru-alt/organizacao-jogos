@@ -23,6 +23,10 @@ export interface SedeComVagas {
   sedeId: string;
   nome: string;
   localizacao: string;
+  /** true quando há alguma alocação FALTOU com Falta_Urgente = true nessa sede, na data. */
+  urgente: boolean;
+  /** true quando a sede tem vaga no dia e todas as vagas dela estão completas. */
+  completa: boolean;
   vagas: VagaResumo[];
 }
 
@@ -38,12 +42,16 @@ export interface DashboardTotais {
 export interface VagaIncompletaPendencia {
   vagaId: string;
   sedeId: string;
+  sedeSigla: string;
   tipo: string;
   faltam: number;
 }
 
 export interface SubstituicaoUrgentePendencia {
   vagaId: string;
+  sedeSigla: string;
+  tipo: string;
+  faltam: number;
 }
 
 export interface DashboardPendencias {

@@ -54,14 +54,41 @@ export class DashboardService {
       await this.alocacoesService.listarFaltasUrgentesPorData(data)
     ).filter((a) => vagaIdsDoDia.has(a.vagaId));
 
+    const siglaPorSedeId = new Map(sedes.map((s) => [s.id, s.sigla]));
+
+    const sedeIdsComFaltaUrgente = new Set(
+      faltasUrgentes.map((a) => {
+        const vaga = vagasComDisponibilidade.find((v) => v.id === a.vagaId);
+        return vaga?.sedeId;
+      }),
+    );
+
+    /** Ordem de exibição no Dashboard: urgentes → normais → completas. */
+    const prioridadeOrdenacao = (sede: { urgente: boolean; completa: boolean }) => {
+      if (sede.urgente) return 0;
+      if (sede.completa) return 2;
+      return 1;
+    };
+
     const sedesComVagas = sedes
-      .map((sede) => ({
-        sedeId: sede.id,
-        nome: sede.nome,
-        localizacao: sede.localizacao,
-        vagas: vagasComDisponibilidade.filter((v) => v.sedeId === sede.id),
-      }))
-      .filter((sede) => sede.vagas.length > 0);
+      .map((sede) => {
+        const vagas = vagasComDisponibilidade.filter(
+          (v) => v.sedeId === sede.id,
+        );
+        return {
+          sedeId: sede.id,
+          nome: sede.nome,
+          localizacao: sede.localizacao,
+          urgente: sedeIdsComFaltaUrgente.has(sede.id),
+          // Só "completa" quando a sede tem vaga no dia e todas estão preenchidas.
+          completa:
+            vagas.length > 0 &&
+            vagas.every((v) => v.status === StatusVaga.COMPLETA),
+          vagas,
+        };
+      })
+      .filter((sede) => sede.vagas.length > 0)
+      .sort((a, b) => prioridadeOrdenacao(a) - prioridadeOrdenacao(b));
 
     const totalVagas = vagasComDisponibilidade.length;
     const vagasCompletas = vagasComDisponibilidade.filter(
@@ -98,12 +125,22 @@ export class DashboardService {
           .map((v) => ({
             vagaId: v.id,
             sedeId: v.sedeId,
+            sedeSigla: siglaPorSedeId.get(v.sedeId) ?? '',
             tipo: v.tipo,
             faltam: v.disponiveis,
-          })),
-        substituicoesUrgentes: faltasUrgentes.map((a) => ({
-          vagaId: a.vagaId,
-        })),
+          }))
+          .sort((a, b) => a.sedeSigla.localeCompare(b.sedeSigla)),
+        substituicoesUrgentes: faltasUrgentes
+          .map((a) => {
+            const vaga = vagasComDisponibilidade.find((v) => v.id === a.vagaId);
+            return {
+              vagaId: a.vagaId,
+              sedeSigla: siglaPorSedeId.get(vaga?.sedeId ?? '') ?? '',
+              tipo: vaga?.tipo ?? '',
+              faltam: vaga?.disponiveis ?? 0,
+            };
+          })
+          .sort((a, b) => a.sedeSigla.localeCompare(b.sedeSigla)),
       },
     };
   }

@@ -116,15 +116,18 @@ RESPONSAVEIS
   num dia e Forklift no outro.
 
 ### Sedes
-- Campos: ID, Nome, Tipo_Sede, Responsável_ID, Status, Localizacao (link).
+- Campos: ID, Nome, Tipo_Sede, Responsável_ID, Status, Localizacao (link),
+  Sigla (coluna G — prefixo curto usado nas pendências do Dashboard, ex.:
+  "[HPT] Vaga incompleta").
 - **Sem restrição de visibilidade**: todo usuário logado (Administrador ou
   qualquer Responsável) pode ver todas as sedes, sem limite —
   `Responsável_ID` identifica quem administra a sede, não quem pode vê-la.
-- Dashboard tem um filtro opt-in "Minha sede" / "Todas as sedes" (padrão:
-  Todas). É só conveniência de visualização, não controle de acesso — só
-  restringe às sedes do próprio responsável quando ele escolhe
-  explicitamente "Minha sede"; Administrador não tem sede própria, então o
-  filtro não se aplica a ele.
+- Dashboard tem um filtro opt-in "Minha sede" / "Todas as sedes" — para
+  Responsável, a tela abre com "Minha sede" selecionado por padrão (só
+  reflete o que ele mais usa no dia a dia; ele pode trocar pra "Todas as
+  sedes" a qualquer momento, é conveniência de visualização, não controle
+  de acesso). Administrador não tem sede própria, então o filtro não se
+  aplica a ele — sempre vê todas.
 - Board deve exibir o link de localização de forma clicável.
 
 ### Vagas
@@ -273,6 +276,8 @@ Cadastrado manualmente pelo administrador
 - Responsável_ID: Id do responsavel pela sede
 - Status: ATIVA/INATIVA
 - Localizacao: Link do google maps
+- Sigla: Sigla curta da sede, usada como prefixo `[SIGLA]` nas pendências
+  "Vaga incompleta" do Dashboard
 
 ### Vagas
 Cadastrado por formulario pelo chefe, utilizado para mostrar quais sao as vagas disponiveis em cada sede, que vai aparecer no dashboard

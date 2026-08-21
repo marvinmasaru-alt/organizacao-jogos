@@ -7,17 +7,24 @@ import { CriarAlocacaoDto } from './dto/criar-alocacao.dto';
 const SHEET_NAME = 'ALOCACOES';
 
 /**
- * Status que contam como "ocupando" a vaga no cálculo de disponibilidade:
- * o funcionário foi de fato alocado ali (ALOCADO) ou foi alocado e faltou
- * (FALTOU — falta não é cancelamento, não libera a vaga). Só CANCELADO
- * libera a posição.
- * ⚠️ Assunção sinalizada no plano da etapa — confirmar se o comportamento
- * esperado é outro antes de mudar esta lista.
+ * Status que contam como "ocupando" a vaga no cálculo de disponibilidade
+ * (X/Y, "vagas preenchidas"): só ALOCADO. CANCELADO e FALTOU liberam a
+ * posição — quem faltou não está mais efetivamente trabalhando ali, então
+ * a vaga volta a aparecer como disponível (e some, no card da sede, o
+ * indicador de urgência quando marcado — ver DashboardService).
  */
-const STATUS_QUE_OCUPAM_VAGA: StatusAlocacao[] = [
-  StatusAlocacao.ALOCADO,
-  StatusAlocacao.FALTOU,
-];
+const STATUS_QUE_OCUPAM_VAGA: StatusAlocacao[] = [StatusAlocacao.ALOCADO];
+
+/**
+ * Checkbox do Google Sheets: com o valueRenderOption padrão (FORMATTED_VALUE)
+ * a API devolve a string "TRUE"/"FALSE" (não "VERDADEIRO"/"FALSO", mesmo com
+ * a planilha em pt-BR) — aceita as duas grafias pra não depender de qual
+ * idioma o Sheets decidiu formatar.
+ */
+function ehVerdadeiro(valor: string | undefined): boolean {
+  const normalizado = (valor ?? '').trim().toUpperCase();
+  return normalizado === 'TRUE' || normalizado === 'VERDADEIRO';
+}
 
 @Injectable()
 export class AlocacoesService {
@@ -113,7 +120,7 @@ export class AlocacoesService {
       motivoCancelamento: motivoCancelamento || null,
       dataFalta: dataFalta || null,
       motivoFalta: motivoFalta || null,
-      faltaUrgente: (faltaUrgente ?? '').toUpperCase() === 'VERDADEIRO',
+      faltaUrgente: ehVerdadeiro(faltaUrgente),
     };
   }
 }

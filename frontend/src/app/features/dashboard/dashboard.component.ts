@@ -6,8 +6,17 @@ import { DashboardResumo, EscopoSedes } from './dashboard.model';
 
 type EstadoTela = 'carregando' | 'erro' | 'vazio' | 'carregado';
 
+/**
+ * Formata em YYYY-MM-DD usando os componentes LOCAIS da data — nunca usar
+ * toISOString() aqui, porque ele converte pra UTC e desalinha o dia em
+ * qualquer fuso diferente de UTC+0 (ex.: JST é UTC+9, então
+ * toISOString() "puxava" a data pro dia anterior).
+ */
 function paraDataIso(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  const ano = d.getFullYear();
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
 }
 
 @Component({
@@ -22,7 +31,7 @@ export class DashboardComponent implements OnInit {
   private readonly auth = inject(AuthService);
 
   readonly data = signal(paraDataIso(new Date()));
-  readonly escopo = signal<EscopoSedes>('todas');
+  readonly escopo = signal<EscopoSedes>('minha');
   readonly estado = signal<EstadoTela>('carregando');
   readonly resumo = signal<DashboardResumo | null>(null);
 

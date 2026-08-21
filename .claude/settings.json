@@ -10,7 +10,14 @@
       "Bash(node -e ' *)",
       "Bash(curl -s 'http://localhost:3000/dashboard?data=2026-08-20&escopo=minha' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im1hcnZpbi5tYXNhcnVAZ21haWwuY29tIiwibm9tZSI6IkFuZHJlIiwicGVyZmlsIjoiUkVTUE9OU0FWRUwiLCJyZXNwb25zYXZlbElkIjoiUjAwMiIsImlhdCI6MTc4NzIxMTM5MCwiZXhwIjoxNzg3MjE0OTkwfQ.LaniEW_aegmYLD_5Oofp42qiqA2jPqfAoGHKxgnJpMU')",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\([s['sedeId'] for s in d['sedes']]\\)\")",
-      "Bash(kill 47103)"
+      "Bash(kill 47103)",
+      "Bash(ps -p 51063 -o pid,lstart,command)",
+      "Bash(curl -s http://localhost:3000/alocacoes)",
+      "Bash(python3 -m json.tool)",
+      "Bash(kill 51063)",
+      "Bash(ps -p 51217 -o pid,ppid,lstart,command)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\([{'id':a['id'],'status':a['status'],'faltaUrgente':a['faltaUrgente']} for a in d]\\)\")",
+      "Bash(curl -s 'http://localhost:3000/dashboard?data=2026-08-20&escopo=todas' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im1hcnZpbi5tYXNhcnVAZ21haWwuY29tIiwibm9tZSI6IkFuZHJlIiwicGVyZmlsIjoiUkVTUE9OU0FWRUwiLCJyZXNwb25zYXZlbElkIjoiUjAwMiIsImlhdCI6MTc4NzI2OTkzNSwiZXhwIjoxNzg3MjczNTM1fQ.uOm7eCFLrCRgUZUpXDbZ-hC6wDwPrHVhaT1L5XGacOU')"
     ]
   }
 }

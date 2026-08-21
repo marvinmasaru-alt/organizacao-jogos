@@ -43,14 +43,38 @@
         @if (r.pendencias.substituicoesUrgentes.length === 0 && r.pendencias.vagasIncompletas.length === 0) {
           <p>Nenhuma pendência para esta data.</p>
         } @else {
-          <ul>
-            @for (item of r.pendencias.substituicoesUrgentes; track item.vagaId) {
-              <li>🔴 Necessita de substituição urgente — vaga {{ item.vagaId }}</li>
-            }
-            @for (item of r.pendencias.vagasIncompletas; track item.vagaId) {
-              <li>🟡 Vaga incompleta — {{ item.tipo }}, faltam {{ item.faltam }}</li>
-            }
-          </ul>
+          @if (r.pendencias.substituicoesUrgentes.length > 0) {
+            <h3 class="pendencias__subtitulo pendencias__subtitulo--urgente">
+              🔴 {{ r.pendencias.substituicoesUrgentes.length }}
+              substituição{{ r.pendencias.substituicoesUrgentes.length > 1 ? 'ões' : '' }} urgente{{ r.pendencias.substituicoesUrgentes.length > 1 ? 's' : '' }}
+            </h3>
+            <ul>
+              @for (item of r.pendencias.substituicoesUrgentes; track item.vagaId) {
+                <li>
+                  @if (item.sedeSigla) {
+                    [{{ item.sedeSigla }}]
+                  }
+                  {{ item.tipo }}, faltam {{ item.faltam }}
+                </li>
+              }
+            </ul>
+          }
+          @if (r.pendencias.vagasIncompletas.length > 0) {
+            <h3 class="pendencias__subtitulo">
+              🟡 {{ r.pendencias.vagasIncompletas.length }}
+              vaga{{ r.pendencias.vagasIncompletas.length > 1 ? 's' : '' }} incompleta{{ r.pendencias.vagasIncompletas.length > 1 ? 's' : '' }}
+            </h3>
+            <ul>
+              @for (item of r.pendencias.vagasIncompletas; track item.vagaId) {
+                <li>
+                  @if (item.sedeSigla) {
+                    [{{ item.sedeSigla }}]
+                  }
+                  {{ item.tipo }}, faltam {{ item.faltam }}
+                </li>
+              }
+            </ul>
+          }
         }
       </section>
 
@@ -80,9 +104,18 @@
       <section class="vagas-do-dia" aria-label="Vagas de hoje">
         <h2>Vagas de hoje</h2>
         @for (sede of r.sedes; track sede.sedeId) {
-          <article class="sede-card">
+          <article
+            class="sede-card"
+            [class.sede-card--urgente]="sede.urgente"
+            [class.sede-card--completa]="sede.completa"
+          >
             <h3>
               {{ sede.nome }}
+              @if (sede.urgente) {
+                <span class="badge-urgente">🔴 Urgente</span>
+              } @else if (sede.completa) {
+                <span class="badge-completa">✓ Completo</span>
+              }
               @if (sede.localizacao) {
                 <a [href]="sede.localizacao" target="_blank" rel="noopener">📍 localização</a>
               }
