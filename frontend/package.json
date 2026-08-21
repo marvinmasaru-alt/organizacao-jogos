@@ -8,8 +8,8 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "build:prod": "ng build --configuration production",
-    "start:prod": "ng serve --host 0.0.0.0 --port $PORT --allowed-hosts frontend-production-4c24.up.railway.app",
+    "build:prod": "node scripts/set-env.js && ng build --configuration production",
+    "start:prod": "node scripts/set-env.js && ng serve --configuration production --host 0.0.0.0 --port $PORT --allowed-hosts frontend-production-4c24.up.railway.app",
     "test": "ng test"
   },
   "dependencies": {
