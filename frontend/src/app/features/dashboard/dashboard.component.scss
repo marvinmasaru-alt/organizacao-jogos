@@ -144,6 +144,11 @@
   color: #1a7f37;
 }
 
+.vaga-linha__urgente {
+  color: #b00020;
+  font-weight: 700;
+}
+
 /* Mobile-first: em telas maiores, cards de totais ficam lado a lado (já
    cobre isso via auto-fit acima); aqui só um ajuste de respiro extra. */
 @media (min-width: 768px) {

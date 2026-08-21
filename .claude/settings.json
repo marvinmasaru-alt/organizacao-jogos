@@ -17,7 +17,10 @@
       "Bash(kill 51063)",
       "Bash(ps -p 51217 -o pid,ppid,lstart,command)",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\([{'id':a['id'],'status':a['status'],'faltaUrgente':a['faltaUrgente']} for a in d]\\)\")",
-      "Bash(curl -s 'http://localhost:3000/dashboard?data=2026-08-20&escopo=todas' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im1hcnZpbi5tYXNhcnVAZ21haWwuY29tIiwibm9tZSI6IkFuZHJlIiwicGVyZmlsIjoiUkVTUE9OU0FWRUwiLCJyZXNwb25zYXZlbElkIjoiUjAwMiIsImlhdCI6MTc4NzI2OTkzNSwiZXhwIjoxNzg3MjczNTM1fQ.uOm7eCFLrCRgUZUpXDbZ-hC6wDwPrHVhaT1L5XGacOU')"
+      "Bash(curl -s 'http://localhost:3000/dashboard?data=2026-08-20&escopo=todas' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im1hcnZpbi5tYXNhcnVAZ21haWwuY29tIiwibm9tZSI6IkFuZHJlIiwicGVyZmlsIjoiUkVTUE9OU0FWRUwiLCJyZXNwb25zYXZlbElkIjoiUjAwMiIsImlhdCI6MTc4NzI2OTkzNSwiZXhwIjoxNzg3MjczNTM1fQ.uOm7eCFLrCRgUZUpXDbZ-hC6wDwPrHVhaT1L5XGacOU')",
+      "Bash(ps -p 52840 -o pid,lstart,command)",
+      "Bash(curl -s 'http://localhost:3000/dashboard?data=2026-08-20&escopo=todas' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im1hcnZpbi5tYXNhcnVAZ21haWwuY29tIiwibm9tZSI6IkFuZHJlIiwicGVyZmlsIjoiUkVTUE9OU0FWRUwiLCJyZXNwb25zYXZlbElkIjoiUjAwMiIsImlhdCI6MTc4NzI3MzEzMCwiZXhwIjoxNzg3Mjc2NzMwfQ.zVBSNy1d-vtk4dxWMRTghDcxg1mU93mZhIqlCZ-DPuU')",
+      "Bash(python3 -c ' *)"
     ]
   }
 }

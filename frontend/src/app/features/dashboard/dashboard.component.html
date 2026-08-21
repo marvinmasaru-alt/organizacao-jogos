@@ -132,6 +132,12 @@
                 >
                   {{ vaga.status === 'COMPLETA' ? '✓ Completo' : (vaga.disponiveis + ' vagas disponíveis') }}
                 </span>
+                @if (vaga.substituicoesUrgentes > 0) {
+                  <span class="vaga-linha__urgente">
+                    🔴 {{ vaga.substituicoesUrgentes }}
+                    substituição{{ vaga.substituicoesUrgentes > 1 ? 'ões' : '' }} urgente{{ vaga.substituicoesUrgentes > 1 ? 's' : '' }}
+                  </span>
+                }
               </div>
             }
           </article>

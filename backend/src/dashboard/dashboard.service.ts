@@ -63,6 +63,14 @@ export class DashboardService {
       }),
     );
 
+    const substituicoesUrgentesPorVagaId = new Map<string, number>();
+    for (const falta of faltasUrgentes) {
+      substituicoesUrgentesPorVagaId.set(
+        falta.vagaId,
+        (substituicoesUrgentesPorVagaId.get(falta.vagaId) ?? 0) + 1,
+      );
+    }
+
     /** Ordem de exibição no Dashboard: urgentes → normais → completas. */
     const prioridadeOrdenacao = (sede: { urgente: boolean; completa: boolean }) => {
       if (sede.urgente) return 0;
@@ -72,9 +80,12 @@ export class DashboardService {
 
     const sedesComVagas = sedes
       .map((sede) => {
-        const vagas = vagasComDisponibilidade.filter(
-          (v) => v.sedeId === sede.id,
-        );
+        const vagas = vagasComDisponibilidade
+          .filter((v) => v.sedeId === sede.id)
+          .map((v) => ({
+            ...v,
+            substituicoesUrgentes: substituicoesUrgentesPorVagaId.get(v.id) ?? 0,
+          }));
         return {
           sedeId: sede.id,
           nome: sede.nome,

@@ -17,6 +17,8 @@ export interface VagaResumo {
   status: string;
   alocacoesValidas: number;
   disponiveis: number;
+  /** Nº de alocações FALTOU com Falta_Urgente = true nessa vaga, na data. */
+  substituicoesUrgentes: number;
 }
 
 export interface SedeComVagas {
