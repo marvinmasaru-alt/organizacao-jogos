@@ -70,6 +70,48 @@
                 <span>Alocados: {{ vaga.alocacoesValidas }}</span>
                 <span>Faltam: {{ vaga.disponiveis }}</span>
                 <span>Status: {{ vaga.status === 'COMPLETA' ? 'COMPLETA' : 'INCOMPLETA' }}</span>
+
+                <button
+                  type="button"
+                  class="vaga-alocados__toggle"
+                  (click)="alternarExpansaoVaga(vaga.id)"
+                >
+                  {{ vagasExpandidas().has(vaga.id) ? '▾' : '▸' }}
+                  Ver funcionários alocados ({{ vaga.alocacoesValidas }})
+                </button>
+
+                @if (vagasExpandidas().has(vaga.id)) {
+                  <div class="vaga-alocados__conteudo">
+                    @switch (estadoAlocadosPorVaga().get(vaga.id)) {
+                      @case ('carregando') {
+                        <p class="estado">Carregando…</p>
+                      }
+                      @case ('erro') {
+                        <p class="estado estado--erro">Não foi possível carregar.</p>
+                      }
+                      @default {
+                        @if ((alocadosPorVaga().get(vaga.id) ?? []).length === 0) {
+                          <p class="estado">Nenhum funcionário alocado ainda.</p>
+                        } @else {
+                          <ul class="vaga-alocados__lista">
+                            @for (a of alocadosPorVaga().get(vaga.id); track a.alocacaoId) {
+                              <li>
+                                @if (a.nome) {
+                                  {{ a.nome }} - {{ a.telefone }}
+                                  @if (a.externo) {
+                                    (Externo)
+                                  }
+                                } @else {
+                                  Funcionário de outro responsável
+                                }
+                              </li>
+                            }
+                          </ul>
+                        }
+                      }
+                    }
+                  </div>
+                }
               </div>
             }
           </div>
@@ -103,22 +145,24 @@
                         [class.funcionario-item--riscado]="f.situacao === 'ALOCADO_OUTRA_VAGA'"
                         [class.funcionario-item--ja-alocado]="f.situacao === 'JA_ALOCADO_NESTA_VAGA'"
                       >
-                        <input
-                          type="checkbox"
-                          [checked]="selecoes().has(f.id)"
-                          [disabled]="checkboxDesabilitado(f)"
-                          (change)="alternarSelecao(f, $any($event.target).checked)"
-                        />
-                        <span class="funcionario-item__nome">
-                          {{ f.nome }} - {{ f.telefone }}
-                          @switch (f.situacao) {
-                            @case ('CANCELOU_NESTA_VAGA') { <em>(Cancelou) — Indisponível para esta vaga</em> }
-                            @case ('FALTOU_NESTA_VAGA') { <em>(Faltou) — Indisponível para esta vaga</em> }
-                            @case ('ALOCADO_OUTRA_VAGA') { <em>Já alocado em outra vaga nesta data</em> }
-                            @case ('JA_ALOCADO_NESTA_VAGA') { <em>Já alocado nesta vaga</em> }
-                            @default { <em>Disponível</em> }
-                          }
-                        </span>
+                        <label class="funcionario-item__linha">
+                          <input
+                            type="checkbox"
+                            [checked]="selecoes().has(f.id)"
+                            [disabled]="checkboxDesabilitado(f)"
+                            (change)="alternarSelecao(f, $any($event.target).checked)"
+                          />
+                          <span class="funcionario-item__nome">
+                            {{ f.nome }} - {{ f.telefone }}
+                            @switch (f.situacao) {
+                              @case ('CANCELOU_NESTA_VAGA') { <em>(Cancelou) — Indisponível para esta vaga</em> }
+                              @case ('FALTOU_NESTA_VAGA') { <em>(Faltou) — Indisponível para esta vaga</em> }
+                              @case ('ALOCADO_OUTRA_VAGA') { <em>Já alocado em outra vaga nesta data</em> }
+                              @case ('JA_ALOCADO_NESTA_VAGA') { <em>Já alocado nesta vaga</em> }
+                              @default { <em>Disponível</em> }
+                            }
+                          </span>
+                        </label>
                         @if (selecoes().has(f.id)) {
                           <select
                             [value]="selecoes().get(f.id)"
@@ -129,7 +173,7 @@
                                 [value]="vaga.id"
                                 [disabled]="opcaoDesabilitada(f.id, vaga.id)"
                               >
-                                {{ vaga.tipo }} ({{ capacidadeRestante(vaga.id, f.id) }} restante(s))
+                                {{ vaga.tipo }}
                               </option>
                             }
                           </select>

@@ -66,6 +66,17 @@ export class GoogleSheetsService {
    * requisição HTTP, ou todas as linhas são gravadas, ou nenhuma é (em
    * caso de falha de rede/API, não há como ficar "meio gravado" no meio
    * de uma chamada só).
+   *
+   * ⚠️ O `range` usado pra descobrir "onde termina a tabela" é só
+   * `${sheetName}!A:A` (coluna A) de propósito — nunca `sheetName` sozinho.
+   * Com o range sem coluna nenhuma, a API tenta adivinhar os limites da
+   * tabela varrendo a linha inteira, e se existir qualquer valor solto
+   * numa coluna distante (linha "órfã", teste manual, etc.) ela confunde
+   * isso com a borda direita da tabela e passa a anexar cada vez mais
+   * deslocado pra direita, longe da coluna A — foi exatamente esse bug que
+   * fez alocações pararem de aparecer (a linha era gravada, só que fora de
+   * onde o app lê). Restringir a coluna A garante que ela sempre ache a
+   * próxima linha realmente vazia ali e escreva a partir da coluna A.
    */
   async appendRows(
     sheetName: string,
@@ -77,7 +88,7 @@ export class GoogleSheetsService {
     const client = await this.getClient();
     await client.spreadsheets.values.append({
       spreadsheetId: this.spreadsheetId,
-      range: sheetName,
+      range: `${sheetName}!A:A`,
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: rows },
     });

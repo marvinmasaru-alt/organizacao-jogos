@@ -1,9 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { AlocacoesService } from '../alocacoes/alocacoes.service';
+import { UsuarioAutenticado } from '../auth/auth.service';
 import { GoogleSheetsService } from '../common/google-sheets/google-sheets.service';
-import { StatusAlocacao, StatusFuncionario } from '../common/types/enums';
+import {
+  PerfilUsuario,
+  StatusAlocacao,
+  StatusFuncionario,
+} from '../common/types/enums';
 import {
   Funcionario,
+  FuncionarioAlocadoNaVaga,
   FuncionarioParaAlocacao,
   SituacaoParaAlocacao,
 } from './funcionario.entity';
@@ -88,6 +94,52 @@ export class FuncionariosService {
         ...f,
         situacao,
         selecionavel: situacao === SituacaoParaAlocacao.DISPONIVEL,
+      };
+    });
+  }
+
+  /**
+   * Funcionários alocados (Status = ALOCADO) numa vaga, pra seção
+   * recolhível "Ver funcionários alocados" da tela de Alocação. Mostra o
+   * nome real quando o usuário logado é Administrador, OU o responsável
+   * que cadastrou aquele funcionário, OU o responsável pela SEDE daquela
+   * alocação (`Responsavel_Sede_ID`) — quem administra a sede precisa
+   * saber quem está trabalhando nela, mesmo quando foi outro responsável
+   * que forneceu o funcionário (CLAUDE.md: responsável pela sede ≠
+   * responsável pelo fornecimento são papéis independentes). Qualquer
+   * outro caso mascara o nome.
+   */
+  async listarAlocadosParaVaga(
+    vagaId: string,
+    usuario: UsuarioAutenticado,
+  ): Promise<FuncionarioAlocadoNaVaga[]> {
+    const alocacoesValidas =
+      await this.alocacoesService.listarValidasPorVaga(vagaId);
+    const todosFuncionarios = await this.listarTodos();
+
+    return alocacoesValidas.map((a) => {
+      const funcionario = todosFuncionarios.find(
+        (f) => f.id === a.funcionarioId,
+      );
+      const ehDono = funcionario?.responsavelCadastroId === usuario.responsavelId;
+      const pertenceAoResponsavel =
+        usuario.perfil === PerfilUsuario.ADMINISTRADOR ||
+        ehDono ||
+        a.responsavelSedeId === usuario.responsavelId;
+
+      // Só marca "externo" quando o nome está VISÍVEL mas não é dono do
+      // cadastro — está vendo só porque é responsável pela sede.
+      const externo =
+        pertenceAoResponsavel &&
+        usuario.perfil !== PerfilUsuario.ADMINISTRADOR &&
+        !ehDono;
+
+      return {
+        alocacaoId: a.id,
+        funcionarioId: a.funcionarioId,
+        nome: pertenceAoResponsavel ? (funcionario?.nome ?? a.funcionarioId) : null,
+        telefone: pertenceAoResponsavel ? (funcionario?.telefone ?? null) : null,
+        externo,
       };
     });
   }

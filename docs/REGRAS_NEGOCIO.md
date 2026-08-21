@@ -121,7 +121,7 @@ Os dados previstos incluem:
 
 O sistema possui inicialmente dois tipos de trabalho:
 
-- **Ajudante**
+- **Manpower**
 - **Empilhadeira / Forklift**
 
 Esses tipos devem ser tratados como valores controlados pelo sistema.
@@ -188,7 +188,7 @@ Exemplo:
 Vaga:
 Toyohashi
 20/08
-Ajudante
+Manpower
 10 funcionários
 Essa vaga precisa de 10 alocações ativas.
 7.2 Ocupação
@@ -276,7 +276,7 @@ Caso exista conflito, a operação deve ser recusada.
 O tipo de trabalho do funcionário deve ser compatível com o tipo da vaga.
 Exemplo:
 Funcionário:
-AJUDANTE
+MANPOWER
 
 Vaga:
 EMPILHADEIRA
@@ -307,7 +307,7 @@ Pagamento
 16. Valores dos funcionários
 Para sedes externas, os valores definidos inicialmente são:
 Tipo	Valor pago ao funcionário
-Ajudante	¥12.000
+Manpower	¥12.000
 Empilhadeira	¥15.000
 
 
@@ -315,7 +315,7 @@ Esses valores devem ser tratados como regras de negócio e não devem ser altera
 17. Valores do responsável
 Os valores definidos inicialmente para o responsável são:
 Tipo	Valor do responsável
-Ajudante	¥16.000
+Manpower	¥16.000
 Empilhadeira	¥18.000
 
 
@@ -327,7 +327,7 @@ Valor recebido pelo responsável
 Valor pago ao funcionário
 =
 Comissão
-Ajudante
+Manpower
 Recebido: ¥16.000
 Pago:     ¥12.000
 ------------------
@@ -354,7 +354,7 @@ O sistema deve permitir identificar que o responsável realizou um pagamento sup
 Um pagamento deve ser considerado pendente quando existe uma obrigação de pagamento ainda não registrada como concluída.
 Exemplo:
 Funcionário: João
-Função: Ajudante
+Função: Manpower
 Valor: ¥12.000
 Status: PENDENTE
 O sistema deve permitir visualizar os pagamentos pendentes.
@@ -820,7 +820,7 @@ Tipo de trabalho
 Status
 16. Tipos de Trabalho
 O sistema possui inicialmente dois tipos:
-AJUDANTE
+MANPOWER
 EMPILHADEIRA
 Esses tipos devem ser tratados como valores controlados.
 17. Visibilidade dos Funcionários
@@ -869,7 +869,7 @@ Status
 Exemplo:
 Sede: Toyohashi
 Data: 20/08
-Função: Ajudante
+Função: Manpower
 Quantidade: 10
 A vaga necessita de 10 alocações ativas.
 22. Ocupação
@@ -957,7 +957,7 @@ Caso exista conflito:
 31. Compatibilidade de Função
 O tipo de funcionário deve ser compatível com o tipo da vaga.
 Exemplo inválido:
-Funcionário: AJUDANTE
+Funcionário: MANPOWER
 Vaga: EMPILHADEIRA
 Resultado:
 ❌ Alocação não permitida
@@ -992,7 +992,7 @@ Se está atrasado
 33. Valores dos Funcionários
 Para sedes externas:
 Tipo	Valor
-Ajudante	¥12.000
+Manpower	¥12.000
 Empilhadeira	¥15.000
 
 
@@ -1001,7 +1001,7 @@ Não devem ser alterados diretamente pelo frontend.
 34. Valores do Responsável
 Valores definidos:
 Tipo	Valor
-Ajudante	¥16.000
+Manpower	¥16.000
 Empilhadeira	¥18.000
 
 
@@ -1012,7 +1012,7 @@ Valor recebido pelo responsável
 Valor pago ao funcionário
 =
 Comissão
-Ajudante
+Manpower
 Recebido: ¥16.000
 Pago:     ¥12.000
 Comissão: ¥4.000
@@ -1031,7 +1031,7 @@ O sistema deve registrar e identificar essa diferença.
 Um pagamento é pendente quando existe uma obrigação de pagamento ainda não registrada como concluída.
 Exemplo:
 Funcionário: João
-Função: Ajudante
+Função: Manpower
 Valor: ¥12.000
 Status: PENDENTE
 38. Pagamentos Realizados

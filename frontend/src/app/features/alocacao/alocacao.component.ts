@@ -8,6 +8,7 @@ import { AlocacaoService } from './alocacao.service';
 import {
   DashboardResumo,
   EscopoSedes,
+  FuncionarioAlocadoNaVaga,
   FuncionarioParaAlocacao,
   SedeComVagas,
   SituacaoParaAlocacao,
@@ -15,22 +16,24 @@ import {
 
 type EstadoResumo = 'carregando' | 'erro' | 'carregado';
 type EstadoFuncionarios = 'ocioso' | 'carregando' | 'erro' | 'carregado';
+type EstadoAlocados = 'carregando' | 'erro' | 'carregado';
 
 /**
  * Ordem de prioridade pra decidir qual situação mostrar quando a sede tem
- * mais de uma vaga (Ajudante + Forklift, por ex.): sempre prefere a
- * explicação mais específica/relevante — se o funcionário está disponível
- * em QUALQUER vaga da sede, ele é selecionável; senão, prefere dizer que
- * já está alocado NESTA sede a dizer genericamente "outra vaga" (que só é
- * verdade quando a alocação é em outra sede/dia, sem nenhuma relação com
- * as vagas que estão na tela).
+ * mais de uma vaga (Manpower + Forklift, por ex.). Estados de aviso
+ * (já alocado/cancelou/faltou/alocado em outra vaga) SEMPRE vencem
+ * "Disponível" — senão alguém que cancelou pra Manpower mas nunca foi
+ * tocado em Forklift aparecia como "Disponível" (mascarando o
+ * cancelamento). "Já alocado nesta vaga" vem antes de "outra vaga" pra não
+ * confundir alguém alocado na OUTRA vaga da MESMA sede com alguém alocado
+ * numa sede diferente.
  */
 const PRIORIDADE_SITUACAO: SituacaoParaAlocacao[] = [
-  'DISPONIVEL',
   'JA_ALOCADO_NESTA_VAGA',
   'CANCELOU_NESTA_VAGA',
   'FALTOU_NESTA_VAGA',
   'ALOCADO_OUTRA_VAGA',
+  'DISPONIVEL',
 ];
 
 /**
@@ -75,6 +78,15 @@ export class AlocacaoComponent implements OnInit {
   readonly enviando = signal(false);
   readonly erroEnvio = signal<string | null>(null);
   readonly mensagemSucesso = signal<string | null>(null);
+
+  /** Seção "Ver funcionários alocados" — fechada por padrão, um estado por vaga. */
+  readonly vagasExpandidas = signal<Set<string>>(new Set());
+  readonly alocadosPorVaga = signal<Map<string, FuncionarioAlocadoNaVaga[]>>(
+    new Map(),
+  );
+  readonly estadoAlocadosPorVaga = signal<Map<string, EstadoAlocados>>(
+    new Map(),
+  );
 
   /**
    * Um funcionário por linha, com a situação mais relevante entre todas as
@@ -128,10 +140,24 @@ export class AlocacaoComponent implements OnInit {
   /** ≥1 selecionado já é suficiente pra confirmar — alocação parcial é permitida. */
   readonly podeConfirmar = computed(() => this.selecoes().size > 0);
 
+  /**
+   * O `sedeId` da URL (link "Alocar" do Dashboard) só deve auto-selecionar
+   * a sede uma vez, no carregamento inicial — sem essa guarda, qualquer
+   * `carregarResumo()` seguinte (trocar escopo, trocar data) reaplicava a
+   * mesma sede antiga, mesmo depois do usuário voltar pra lista de sedes.
+   */
+  private sedeDaUrlJaAplicada = false;
+
   ngOnInit(): void {
     const queryData = this.route.snapshot.queryParamMap.get('data');
     if (queryData) {
       this.data.set(queryData);
+    }
+    // Vem do link "Alocar" do Dashboard — garante que a sede pré-selecionada
+    // seja encontrada mesmo se não for "minha sede" (padrão desta tela).
+    const queryEscopo = this.route.snapshot.queryParamMap.get('escopo');
+    if (queryEscopo === 'todas' || queryEscopo === 'minha') {
+      this.escopo.set(queryEscopo);
     }
     this.carregarResumo();
   }
@@ -177,6 +203,42 @@ export class AlocacaoComponent implements OnInit {
     this.selecoes.set(new Map());
     this.busca.set('');
     this.estadoFuncionarios.set('ocioso');
+    this.vagasExpandidas.set(new Set());
+    this.alocadosPorVaga.set(new Map());
+    this.estadoAlocadosPorVaga.set(new Map());
+  }
+
+  /** Fechada por padrão; ao abrir pela primeira vez, busca a lista. */
+  alternarExpansaoVaga(vagaId: string): void {
+    const novoSet = new Set(this.vagasExpandidas());
+    if (novoSet.has(vagaId)) {
+      novoSet.delete(vagaId);
+    } else {
+      novoSet.add(vagaId);
+      if (!this.alocadosPorVaga().has(vagaId)) {
+        this.carregarAlocadosDaVaga(vagaId);
+      }
+    }
+    this.vagasExpandidas.set(novoSet);
+  }
+
+  private carregarAlocadosDaVaga(vagaId: string): void {
+    this.definirEstadoAlocados(vagaId, 'carregando');
+    this.service.funcionariosAlocadosNaVaga(vagaId).subscribe({
+      next: (lista) => {
+        const dados = new Map(this.alocadosPorVaga());
+        dados.set(vagaId, lista);
+        this.alocadosPorVaga.set(dados);
+        this.definirEstadoAlocados(vagaId, 'carregado');
+      },
+      error: () => this.definirEstadoAlocados(vagaId, 'erro'),
+    });
+  }
+
+  private definirEstadoAlocados(vagaId: string, estado: EstadoAlocados): void {
+    const estados = new Map(this.estadoAlocadosPorVaga());
+    estados.set(vagaId, estado);
+    this.estadoAlocadosPorVaga.set(estados);
   }
 
   /** Situação de um funcionário especificamente numa vaga (pra habilitar opção do dropdown). */
@@ -262,26 +324,37 @@ export class AlocacaoComponent implements OnInit {
     );
 
     this.enviando.set(true);
+    // Some a lista antiga da tela IMEDIATAMENTE — sem isso, entre o POST
+    // terminar e o GET de atualização voltar, a lista antiga "flashava" na
+    // tela por um instante antes de ser substituída pelos dados novos.
+    this.estadoFuncionarios.set('carregando');
     this.erroEnvio.set(null);
     this.mensagemSucesso.set(null);
 
     this.service.criarAlocacoes(itens).subscribe({
       next: () => {
-        this.enviando.set(false);
         this.mensagemSucesso.set(
           `${itens.length} funcionário(s) alocado(s) com sucesso.`,
         );
         this.selecoes.set(new Map());
+        // `enviando` só volta a false quando atualizarDepoisDaAlocacao
+        // termina de buscar os dados frescos — ver carregarSituacoes.
         this.atualizarDepoisDaAlocacao(sede.sedeId);
       },
       error: (erro) => {
         this.enviando.set(false);
+        this.estadoFuncionarios.set('carregado');
         this.erroEnvio.set(this.extrairMensagemErro(erro));
       },
     });
   }
 
   private atualizarDepoisDaAlocacao(sedeId: string): void {
+    // Invalida o cache de "funcionários alocados" — a lista antiga já não
+    // reflete o que acabou de ser confirmado.
+    this.alocadosPorVaga.set(new Map());
+    const vagasQueContinuamExpandidas = this.vagasExpandidas();
+
     this.service.resumoDoDia(this.data(), this.escopo()).subscribe({
       next: (resumo) => {
         this.resumo.set(resumo);
@@ -289,7 +362,17 @@ export class AlocacaoComponent implements OnInit {
         if (sedeAtualizada) {
           this.sedeSelecionada.set(sedeAtualizada);
           this.carregarSituacoes(sedeAtualizada);
+          for (const vagaId of vagasQueContinuamExpandidas) {
+            this.carregarAlocadosDaVaga(vagaId);
+          }
+        } else {
+          this.enviando.set(false);
+          this.estadoFuncionarios.set('carregado');
         }
+      },
+      error: () => {
+        this.enviando.set(false);
+        this.estadoFuncionarios.set('carregado');
       },
     });
   }
@@ -301,10 +384,13 @@ export class AlocacaoComponent implements OnInit {
         this.resumo.set(resumo);
         this.estadoResumo.set('carregado');
 
-        const sedeIdDaUrl = this.route.snapshot.queryParamMap.get('sedeId');
-        if (sedeIdDaUrl && !this.sedeSelecionada()) {
-          const sede = resumo.sedes.find((s) => s.sedeId === sedeIdDaUrl);
-          if (sede) this.selecionarSede(sede);
+        if (!this.sedeDaUrlJaAplicada) {
+          this.sedeDaUrlJaAplicada = true;
+          const sedeIdDaUrl = this.route.snapshot.queryParamMap.get('sedeId');
+          if (sedeIdDaUrl) {
+            const sede = resumo.sedes.find((s) => s.sedeId === sedeIdDaUrl);
+            if (sede) this.selecionarSede(sede);
+          }
         }
       },
       error: () => {
@@ -319,6 +405,7 @@ export class AlocacaoComponent implements OnInit {
     if (sede.vagas.length === 0) {
       this.situacoesPorVaga.set(new Map());
       this.estadoFuncionarios.set('carregado');
+      this.enviando.set(false);
       return;
     }
 
@@ -333,8 +420,10 @@ export class AlocacaoComponent implements OnInit {
         sede.vagas.forEach((v, indice) => mapa.set(v.id, listas[indice]));
         this.situacoesPorVaga.set(mapa);
         this.estadoFuncionarios.set('carregado');
+        this.enviando.set(false);
       },
       error: () => {
+        this.enviando.set(false);
         this.situacoesPorVaga.set(new Map());
         this.estadoFuncionarios.set('erro');
       },

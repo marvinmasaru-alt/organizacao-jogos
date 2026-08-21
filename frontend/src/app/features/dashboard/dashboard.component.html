@@ -122,7 +122,7 @@
               <a
                 class="link-alocar"
                 [routerLink]="['/alocacao']"
-                [queryParams]="{ data: data(), sedeId: sede.sedeId }"
+                [queryParams]="{ data: data(), sedeId: sede.sedeId, escopo: escopo() }"
               >
                 Alocar
               </a>

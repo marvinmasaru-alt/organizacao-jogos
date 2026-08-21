@@ -2,7 +2,11 @@ import { Controller, Get, Param, Patch, Query, Req, UseGuards } from '@nestjs/co
 import { UsuarioAutenticado } from '../auth/auth.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FuncionariosService } from './funcionarios.service';
-import { Funcionario, FuncionarioParaAlocacao } from './funcionario.entity';
+import {
+  Funcionario,
+  FuncionarioAlocadoNaVaga,
+  FuncionarioParaAlocacao,
+} from './funcionario.entity';
 
 interface RequestComSessao {
   user: UsuarioAutenticado;
@@ -34,6 +38,16 @@ export class FuncionariosController {
       vagaId,
       data,
     );
+  }
+
+  /** Seção recolhível "Ver funcionários alocados" da tela de Alocação. */
+  @Get('alocados-na-vaga')
+  @UseGuards(JwtAuthGuard)
+  listarAlocadosNaVaga(
+    @Query('vagaId') vagaId: string,
+    @Req() req: RequestComSessao,
+  ): Promise<FuncionarioAlocadoNaVaga[]> {
+    return this.service.listarAlocadosParaVaga(vagaId, req.user);
   }
 
   // TODO: restringir esta rota ao perfil ADMINISTRADOR (PerfisGuard).

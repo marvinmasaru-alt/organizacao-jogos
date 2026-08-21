@@ -85,9 +85,9 @@ A tela deve ser dividida em duas áreas principais:
 │                                                              │
 │ Buscar funcionário...                                        │
 │                                                              │
-│ ☑ João Silva          Ajudante                               │
-│ ☐ Pedro Santos        Ajudante                               │
-│ ☐ Carlos Oliveira     Ajudante                               │
+│ ☑ João Silva          Manpower                               │
+│ ☐ Pedro Santos        Manpower                               │
+│ ☐ Carlos Oliveira     Manpower                               │
 │                                                              │
 │                                      [CONFIRMAR ALOCAÇÃO]    │
 └──────────────────────────────────────────────────────────────┘
@@ -110,7 +110,7 @@ Exemplo:
 
 Toyohashi
 
-Ajudante
+Manpower
 
 Necessários: 10
 Alocados: 7
@@ -185,7 +185,7 @@ Estiver disponível para a data da vaga.
 
 Exemplo:
 João Silva
-Ajudante
+Manpower
 Disponível
 
 ## 11. Funcionário cancelou ou faltou
@@ -206,7 +206,7 @@ João Silva: Já alocado na vaga: V0001, Não disponível
 ## 13. Quantidade de funcionários
 
 **Alocação parcial é permitida.** Não é preciso preencher a vaga inteira
-numa única operação — por exemplo, alocar 1 dos 10 Ajudantes disponíveis é
+numa única operação — por exemplo, alocar 1 dos 10 Manpower disponíveis é
 uma operação válida e completa por si só.
 
 Selecionando o funcionário com o check aparece um dropdown à direita para
@@ -215,7 +215,7 @@ escolher o tipo ("Manpower" ou "Forklift").
 **O limite por tipo continua rígido**: a quantidade selecionada de um tipo
 nunca pode passar de `faltam` daquele tipo. Se só resta 1 vaga de Forklift,
 não é possível marcar 2 funcionários como Forklift, mesmo que sobrem vagas
-de Ajudante — o checkbox de novos candidatos daquele tipo é desabilitado ao
+de Manpower — o checkbox de novos candidatos daquele tipo é desabilitado ao
 atingir o limite.
 
 **O botão de confirmação habilita quando há pelo menos 1 funcionário
@@ -247,7 +247,7 @@ Vaga:
 Toyohashi
 20/08/2026
 
-Ajudante
+Manpower
 
 Funcionários selecionados:
 ✓ João Silva

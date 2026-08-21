@@ -103,11 +103,11 @@ Depois de aprovado, o funcionário pode ser utilizado no sistema.
 O sistema deve impedir que funcionários que não estejam em condição válida sejam disponibilizados para alocação.
 7. Tipos de trabalho
 No MVP existem somente dois tipos:
-Ajudante
+Manpower
 Forklift
 Um mesmo funcionário pode trabalhar em funções diferentes em dias diferentes.
 Exemplo:
-18/08 → Marcos → Ajudante
+18/08 → Marcos → Manpower
 
 19/08 → Marcos → Forklift
 Portanto o tipo de trabalho não é uma característica permanente do funcionário.
@@ -155,7 +155,7 @@ Campo	Descrição
 ID	ID da vaga
 Data	Data do trabalho
 Sede_ID	Sede
-Tipo	Ajudante/Forklift
+Tipo	Manpower/Forklift
 Quantidade	Número de pessoas necessárias
 Status	Estado da vaga
 
@@ -164,7 +164,7 @@ Exemplo:
 V0001
 18/08/2026
 S001
-Ajudante
+Manpower
 6
 ABERTA
 12. Quantidade de vagas
@@ -210,7 +210,7 @@ Toyohashi
 Responsável: Paulo
 📍 Ver localização
 
-Ajudante
+Manpower
 4/6
 2 vagas disponíveis
 
@@ -229,7 +229,7 @@ Sede de Toyohashi
 Responsável: Paulo
 📍 Localização
 
-Ajudantes
+Manpower
 
 1. Marcos — preenchido por Paulo
 2. João — preenchido por Paulo
@@ -380,12 +380,12 @@ Os detalhes ficam em outra área.
 O sistema também controla o pagamento dos funcionários e os valores recebidos pelos responsáveis.
 Para sedes externas, os valores definidos são:
 Funcionário
-Ajudante → ¥12.000
+Manpower → ¥12.000
 Forklift → ¥15.000
 Esses são os valores destinados ao funcionário.
 31. Valor do responsável
 Para o responsável, foram definidos valores fixos:
-Ajudante → ¥16.000
+Manpower → ¥16.000
 Forklift → ¥18.000
 Existe também a regra financeira mencionada de que o responsável recebe valores maiores no total, dependendo da operação, mas a estrutura atual do sistema deve preservar separadamente:
 valor recebido;

@@ -111,8 +111,8 @@ RESPONSAVEIS
 - **Um funcionário só pode ser alocado pelo responsável que o cadastrou.**
   Mesmo que esteja disponível, outro responsável não pode selecioná-lo.
 - Funcionário não aprovado nunca aparece como disponível para alocação.
-- Tipo de trabalho (`Ajudante` / `Forklift`) **não é fixo no funcionário** —
-  é definido por vaga/dia. O mesmo funcionário pode trabalhar como Ajudante
+- Tipo de trabalho (`Manpower` / `Forklift`) **não é fixo no funcionário** —
+  é definido por vaga/dia. O mesmo funcionário pode trabalhar como Manpower
   num dia e Forklift no outro.
 
 ### Sedes
@@ -131,7 +131,7 @@ RESPONSAVEIS
 - Board deve exibir o link de localização de forma clicável.
 
 ### Vagas
-- Campos: ID, Data, Sede_ID, Tipo (Ajudante/Forklift), Quantidade, Status.
+- Campos: ID, Data, Sede_ID, Tipo (Manpower/Forklift), Quantidade, Status.
 - **Sem restrição de visibilidade**: mesma regra das Sedes — todo usuário
   logado vê todas as vagas, sem limite.
 - `disponíveis = quantidade - alocações válidas` (nunca negativo).
@@ -182,8 +182,8 @@ RESPONSAVEIS
   ajudou a preencher vaga de sede alheia) e administrador.
 
 ### Pagamentos e comissões (sedes externas)
-- Valor pago ao **funcionário**: Ajudante ¥12.000 / Forklift ¥15.000.
-- Valor de referência para o **responsável**: Ajudante ¥16.000 / Forklift ¥18.000.
+- Valor pago ao **funcionário**: Manpower ¥12.000 / Forklift ¥15.000.
+- Valor de referência para o **responsável**: Manpower ¥16.000 / Forklift ¥18.000.
 - O responsável pode pagar ao funcionário um valor diferente do de
   referência — a diferença compõe a comissão.
 - Se o responsável pagar **a mais** do previsto do próprio bolso, isso deve
@@ -284,7 +284,7 @@ Cadastrado por formulario pelo chefe, utilizado para mostrar quais sao as vagas 
 - ID: Id unico da vaga V0001
 - Data: data de cadastro da vaga
 - Sede_ID: id da sede
-- Tipo: tipo de vaga AJUDANTE/FORKLIFT
+- Tipo: tipo de vaga MANPOWER/FORKLIFT
 - Quantidade: quantidade de pessoas necessarias para a vaga
 - Status: Se está ATIVO/INATIVO
 
@@ -322,7 +322,7 @@ tabela para salvar o valor que foi pago ao funcionario, pode ser fixo ou variave
 
 ### Pagamentos
 - ID: Id unico de pagamentos Exemplo: P0001
-- Tipo: Tipo de trabalho que originou o pagamento AJUDANTE/FORKLIFT
+- Tipo: Tipo de trabalho que originou o pagamento MANPOWER/FORKLIFT
 - Responsavel_ID: Responsável que deve realizar o pagamento
 - Alocacao_ID: Alocação que originou o pagamento
 - Funcionario_ID: Funcionário que receberá

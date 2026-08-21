@@ -33,3 +33,18 @@ export interface ItemAlocacao {
   vagaId: string;
   funcionarioId: string;
 }
+
+/**
+ * Um funcionário alocado numa vaga, pra seção recolhível "Ver funcionários
+ * alocados". `nome`/`telefone` vêm `null` juntos quando o backend decidiu
+ * que ele não pertence ao responsável logado (nem à sede). `externo` só é
+ * true quando o nome ESTÁ visível mas foi cadastrado por outro
+ * responsável — a tela mostra "(Externo)" ao lado do nome nesse caso.
+ */
+export interface FuncionarioAlocadoNaVaga {
+  alocacaoId: string;
+  funcionarioId: string;
+  nome: string | null;
+  telefone: string | null;
+  externo: boolean;
+}

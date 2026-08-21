@@ -59,7 +59,7 @@ export class VagasService {
       id: id ?? '',
       data: data ?? '',
       sedeId: sedeId ?? '',
-      tipo: (tipo as TipoTrabalho) || TipoTrabalho.AJUDANTE,
+      tipo: (tipo as TipoTrabalho) || TipoTrabalho.MANPOWER,
       quantidade: Number(quantidade) || 0,
       status: (status as StatusVaga) || StatusVaga.ABERTA,
     };

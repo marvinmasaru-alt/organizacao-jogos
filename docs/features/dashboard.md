@@ -55,7 +55,7 @@ A tela deve ser organizada da seguinte maneira:
 │                                                              │
 │ ┌──────────────────────────────────────────────────────────┐ │
 │ │ Toyohashi                                                │ │
-│ │ Ajudante       8 / 10        ████████░░     80%          │ │
+│ │ Manpower       8 / 10        ████████░░     80%          │ │
 │ │ Forklift       0 / 1         ░░░░░░░░░░     00%.         │ │
 │ │ [Ver vaga]                                               │ │
 │ └──────────────────────────────────────────────────────────┘ │
@@ -115,7 +115,7 @@ Cada vaga deve mostrar:
 - status.
 Exemplo:
 Toyohashi
-Ajudante
+Manpower
 
 8 / 10
 80%
@@ -145,7 +145,7 @@ Exemplo:
 PENDÊNCIAS
 
 🔴 Substituição urgente
-Toyohashi — Ajudante
+Toyohashi — Manpower
 Faltam 2 pessoas
 deve aparecer as substituições urgentes apenas do dia atual, não deverá aparecer as substituições que são de dias anteriores
 

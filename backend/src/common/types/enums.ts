@@ -18,8 +18,9 @@ export enum StatusFuncionario {
   INATIVO = 'INATIVO',
 }
 
+/** Valor literal — é exatamente o que está gravado na coluna Tipo da aba VAGAS na planilha. */
 export enum TipoTrabalho {
-  AJUDANTE = 'Ajudante',
+  MANPOWER = 'Manpower',
   FORKLIFT = 'Forklift',
 }
 

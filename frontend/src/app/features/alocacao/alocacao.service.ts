@@ -5,6 +5,7 @@ import { API_BASE_URL } from '../../core/api/api.config';
 import {
   DashboardResumo,
   EscopoSedes,
+  FuncionarioAlocadoNaVaga,
   FuncionarioParaAlocacao,
   ItemAlocacao,
 } from './alocacao.model';
@@ -36,6 +37,16 @@ export class AlocacaoService {
     return this.http.get<FuncionarioParaAlocacao[]>(
       `${API_BASE_URL}/funcionarios/disponiveis`,
       { params: { vagaId, data } },
+    );
+  }
+
+  /** Seção recolhível "Ver funcionários alocados" — nome já vem mascarado pelo backend quando necessário. */
+  funcionariosAlocadosNaVaga(
+    vagaId: string,
+  ): Observable<FuncionarioAlocadoNaVaga[]> {
+    return this.http.get<FuncionarioAlocadoNaVaga[]>(
+      `${API_BASE_URL}/funcionarios/alocados-na-vaga`,
+      { params: { vagaId } },
     );
   }
 
