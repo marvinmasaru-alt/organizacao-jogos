@@ -18,6 +18,15 @@
   font-size: 0.9rem;
 }
 
+.linha-controles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
 .seletor-data {
   display: flex;
   align-items: center;
@@ -34,6 +43,16 @@
     border-radius: 6px;
     font: inherit;
   }
+}
+
+/* Mesma altura do seletor de data, empurrado pra direita quando cabe na
+   linha — some pra baixo em telas estreitas (flex-wrap do .linha-controles). */
+.seletor-escopo {
+  margin-left: auto;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font: inherit;
 }
 
 .estado {

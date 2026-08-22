@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../../core/api/api.config';
 import {
+  EscopoSedes,
   NovaSituacao,
   ResumoConfirmacaoSede,
   SedeComConfirmacoes,
@@ -13,9 +14,9 @@ import {
 export class ConfirmacaoDiaService {
   private readonly http = inject(HttpClient);
 
-  listarSedes(data: string): Observable<SedeComConfirmacoes[]> {
+  listarSedes(data: string, escopo: EscopoSedes): Observable<SedeComConfirmacoes[]> {
     return this.http.get<SedeComConfirmacoes[]>(`${API_BASE_URL}/confirmacoes`, {
-      params: { data },
+      params: { data, escopo },
     });
   }
 

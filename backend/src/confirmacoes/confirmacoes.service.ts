@@ -16,6 +16,7 @@ import { UsuarioAutenticado } from '../auth/auth.service';
 import { PerfilUsuario } from '../common/types/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  EscopoSedes,
   FuncionarioConfirmacao,
   ResumoConfirmacaoSede,
   ResumoTipoConfirmacao,
@@ -38,21 +39,37 @@ export class ConfirmacoesService {
     private readonly faltasService: FaltasService,
   ) {}
 
-  /** Sedes com pelo menos 1 alocação ATIVA na data, dentro do escopo do usuário. */
+  /**
+   * Sedes com pelo menos 1 alocação na data, dentro do escopo do usuário —
+   * inclusive quando TODAS as alocações daquela sede/dia já foram
+   * canceladas (histórico nunca some, mesmo princípio de resumoDaSede: uma
+   * sede não deve sumir da lista só porque a única pessoa alocada acabou
+   * cancelando).
+   */
   async listarSedesComAlocacoes(
     data: string,
     usuario: UsuarioAutenticado,
+    escopo: EscopoSedes = 'todas',
   ): Promise<SedeComConfirmacoes[]> {
     const dataRef = new Date(data);
+    // Responsável nunca vê sede alheia nesta tela — regra própria da
+    // Confirmação do Dia (docs/features/confirmacao-dia.md, seção 5), mais
+    // restritiva que a visibilidade geral de sedes. Administrador vê tudo
+    // por padrão, mas pode filtrar pra "só a minha" quando ele também é
+    // responsável por alguma sede (ex.: Paulo) — o filtro é só uma
+    // conveniência de visualização, igual o Dashboard: o backend não some
+    // com nada, só restringe o que a lista mostra.
+    const filtrarPorMinhaSede =
+      usuario.perfil === PerfilUsuario.RESPONSAVEL ||
+      (escopo === 'minha' && !!usuario.responsavelId);
+
     const alocacoes = await this.prisma.alocacao.findMany({
       where: {
-        status: StatusAlocacao.ATIVA,
         vaga: {
           data: dataRef,
-          sede:
-            usuario.perfil === PerfilUsuario.RESPONSAVEL
-              ? { responsavelId: usuario.responsavelId }
-              : undefined,
+          sede: filtrarPorMinhaSede
+            ? { responsavelId: usuario.responsavelId }
+            : undefined,
         },
       },
       include: { confirmacao: true, vaga: { include: { sede: true } } },

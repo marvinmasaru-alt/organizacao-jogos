@@ -5,6 +5,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { paraDataIso } from '../../core/utils/data.util';
 import { ConfirmacaoDiaService } from './confirmacao-dia.service';
 import {
+  EscopoSedes,
   FuncionarioConfirmacao,
   NovaSituacao,
   ResumoConfirmacaoSede,
@@ -34,6 +35,17 @@ export class ConfirmacaoDiaComponent implements OnInit {
   private readonly auth = inject(AuthService);
 
   readonly data = signal(paraDataIso(new Date()));
+  /**
+   * Só Administrador vê o seletor — Responsável nunca tem escolha nesta
+   * tela (sempre só a própria sede, regra própria da Confirmação do Dia,
+   * mais restritiva que a visibilidade geral de sedes). Padrão "minha"
+   * quando o Administrador também é responsável por alguma sede (ex.:
+   * Paulo) — prioridade é sempre a própria sede primeiro; cai pra "todas"
+   * só quando ele não tem sede nenhuma (senão "minha" mostraria vazio).
+   */
+  readonly escopo = signal<EscopoSedes>(
+    this.auth.usuario()?.responsavelId ? 'minha' : 'todas',
+  );
   readonly estadoSedes = signal<Estado>('carregando');
   readonly sedes = signal<SedeComConfirmacoes[]>([]);
 
@@ -75,6 +87,8 @@ export class ConfirmacaoDiaComponent implements OnInit {
   );
 
   readonly ehAdministrador = computed(() => this.auth.usuario()?.perfil === 'ADMINISTRADOR');
+  /** Seletor de escopo é exclusivo do Administrador — Responsável nunca tem essa escolha aqui. */
+  readonly mostrarSeletorDeEscopo = this.ehAdministrador;
 
   /** Funcionários agrupados por tipo de trabalho, na ordem em que aparecem no resumo. */
   readonly funcionariosPorTipo = computed(() => {
@@ -88,10 +102,26 @@ export class ConfirmacaoDiaComponent implements OnInit {
     }));
   });
 
+  /**
+   * O `sedeId` da URL (link "Visualizar" do Dashboard, pra sede já
+   * finalizada) só deve auto-selecionar a sede uma vez, no carregamento
+   * inicial — mesma guarda que a tela de Alocação já usa, senão qualquer
+   * `carregarSedes()` seguinte (trocar data/escopo) reaplicaria a mesma
+   * sede antiga mesmo depois do usuário voltar pra lista.
+   */
+  private sedeDaUrlJaAplicada = false;
+
   ngOnInit(): void {
     const queryData = this.route.snapshot.queryParamMap.get('data');
     if (queryData) {
       this.data.set(queryData);
+    }
+    // Vem do link "Visualizar"/"Alocar" do Dashboard — garante que a sede
+    // pré-selecionada seja encontrada mesmo se não for "minha sede"
+    // (padrão desta tela pra Administrador).
+    const queryEscopo = this.route.snapshot.queryParamMap.get('escopo');
+    if (queryEscopo === 'todas' || queryEscopo === 'minha') {
+      this.escopo.set(queryEscopo);
     }
     this.carregarSedes();
   }
@@ -117,12 +147,28 @@ export class ConfirmacaoDiaComponent implements OnInit {
     this.carregarSedes();
   }
 
+  /** Só Administrador chama isso (seletor nem aparece pra Responsável). */
+  selecionarEscopo(escopo: string): void {
+    this.escopo.set(escopo === 'minha' ? 'minha' : 'todas');
+    this.voltarParaSedes();
+    this.carregarSedes();
+  }
+
   private carregarSedes(): void {
     this.estadoSedes.set('carregando');
-    this.service.listarSedes(this.data()).subscribe({
+    this.service.listarSedes(this.data(), this.escopo()).subscribe({
       next: (sedes) => {
         this.sedes.set(sedes);
         this.estadoSedes.set('carregado');
+
+        if (!this.sedeDaUrlJaAplicada) {
+          this.sedeDaUrlJaAplicada = true;
+          const sedeIdDaUrl = this.route.snapshot.queryParamMap.get('sedeId');
+          if (sedeIdDaUrl) {
+            const sede = sedes.find((s) => s.sedeId === sedeIdDaUrl);
+            if (sede) this.selecionarSede(sede);
+          }
+        }
       },
       error: () => this.estadoSedes.set('erro'),
     });

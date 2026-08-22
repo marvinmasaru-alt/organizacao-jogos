@@ -7,6 +7,14 @@ import { StatusConfirmacao, TipoTrabalho } from '@prisma/client';
  */
 export type StatusDia = 'PENDENTE' | 'EM_CONFERENCIA' | 'CONFERIDO';
 
+/**
+ * "minha" = só a(s) sede(s) que o usuário administra; "todas" = sem
+ * filtro. É só conveniência de visualização — o backend nunca esconde uma
+ * sede por trás disso pra Administrador, só filtra o que a lista mostra
+ * (mesmo padrão do Dashboard, ver DashboardService).
+ */
+export type EscopoSedes = 'minha' | 'todas';
+
 /** Item da lista de sedes com atividade numa data (passo 2 da tela). */
 export interface SedeComConfirmacoes {
   sedeId: string;

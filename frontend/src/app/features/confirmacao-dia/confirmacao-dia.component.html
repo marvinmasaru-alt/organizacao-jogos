@@ -1,15 +1,29 @@
 <header class="cabecalho">
   <a class="link-voltar-dashboard" routerLink="/dashboard">← Dashboard</a>
   <h1>Confirmação do Dia</h1>
-  <div class="seletor-data">
-    <button type="button" (click)="irParaDataAnterior()" aria-label="Dia anterior">←</button>
-    <input
-      type="date"
-      [value]="data()"
-      (change)="selecionarData($any($event.target).value)"
-      aria-label="Selecionar data"
-    />
-    <button type="button" (click)="irParaProximaData()" aria-label="Próximo dia">→</button>
+  <div class="linha-controles">
+    <div class="seletor-data">
+      <button type="button" (click)="irParaDataAnterior()" aria-label="Dia anterior">←</button>
+      <input
+        type="date"
+        [value]="data()"
+        (change)="selecionarData($any($event.target).value)"
+        aria-label="Selecionar data"
+      />
+      <button type="button" (click)="irParaProximaData()" aria-label="Próximo dia">→</button>
+    </div>
+
+    @if (mostrarSeletorDeEscopo()) {
+      <select
+        class="seletor-escopo"
+        [value]="escopo()"
+        (change)="selecionarEscopo($any($event.target).value)"
+        aria-label="Filtrar sedes"
+      >
+        <option value="minha">Minhas sedes</option>
+        <option value="todas">Todas as sedes</option>
+      </select>
+    }
   </div>
 </header>
 
