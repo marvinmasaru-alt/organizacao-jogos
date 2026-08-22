@@ -164,6 +164,9 @@ model ModeloVaga {
   tipo        TipoModeloVaga
   ativo       Boolean        @default(true)
   observacao  String?
+  /// Período de vigência da configuração (docs/features/cadastro-vagas.md, seção 9). Nulo = sem limite naquela ponta.
+  dataInicio  DateTime?      @map("data_inicio") @db.Date
+  dataFim     DateTime?      @map("data_fim") @db.Date
   createdAt   DateTime       @default(now()) @map("created_at")
   updatedAt   DateTime       @default(now()) @updatedAt @map("updated_at")
 

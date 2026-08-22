@@ -9,7 +9,13 @@ export interface UsuarioAutenticado {
   email: string;
   nome: string;
   perfil: PerfilUsuario;
-  /** Presente apenas quando perfil === RESPONSAVEL. */
+  /**
+   * Presente sempre que existe um vínculo `responsaveis.usuario_id ->
+   * usuarios.id` — inclusive para Administrador, quando a mesma pessoa
+   * também é um dos responsáveis (ex.: Paulo). Isso deixa esse usuário
+   * cadastrar/alocar funcionários como aquele responsável, além de ter
+   * acesso administrativo completo.
+   */
   responsavelId?: string;
 }
 
@@ -18,9 +24,9 @@ export interface UsuarioAutenticado {
  * inativo) na tabela `usuarios` é sempre negado.
  *
  * `usuarios.tipo` decide o perfil (ADMIN -> Administrador, RESPONSAVEL ->
- * Responsável); quando é RESPONSAVEL, `responsavelId` vem do vínculo
- * `responsaveis.usuario_id -> usuarios.id`. Senha comparada com bcrypt
- * contra `usuarios.senha_hash` — nunca texto puro.
+ * Responsável). `responsavelId` vem do vínculo `responsaveis.usuario_id ->
+ * usuarios.id` sempre que ele existir — não é exclusivo de
+ * `tipo = RESPONSAVEL` (ver comentário em `UsuarioAutenticado`).
  */
 @Injectable()
 export class AuthService {
@@ -61,15 +67,24 @@ export class AuthService {
       return null;
     }
 
+    // Só entra no relacionamento se o vínculo existir E estiver ativo —
+    // um responsável desativado não deve conseguir alocar em nome dele,
+    // mesmo que o usuário de login continue ativo.
+    const responsavelId =
+      usuario.responsavel && usuario.responsavel.ativo
+        ? usuario.responsavel.id
+        : undefined;
+
     if (usuario.tipo === TipoUsuario.ADMIN) {
       return {
         email: usuario.email,
         nome: usuario.nome,
         perfil: PerfilUsuario.ADMINISTRADOR,
+        responsavelId,
       };
     }
 
-    if (!usuario.responsavel || !usuario.responsavel.ativo) {
+    if (!responsavelId) {
       return null;
     }
 
@@ -77,7 +92,7 @@ export class AuthService {
       email: usuario.email,
       nome: usuario.nome,
       perfil: PerfilUsuario.RESPONSAVEL,
-      responsavelId: usuario.responsavel.id,
+      responsavelId,
     };
   }
 }

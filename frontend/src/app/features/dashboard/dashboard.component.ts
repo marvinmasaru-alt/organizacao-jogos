@@ -20,13 +20,21 @@ export class DashboardComponent implements OnInit {
   private readonly auth = inject(AuthService);
 
   readonly data = signal(paraDataIso(new Date()));
-  readonly escopo = signal<EscopoSedes>('minha');
+  /**
+   * Padrão é "minha sede" pra Responsável (o que ele mais usa no dia a
+   * dia); Administrador não tem sede própria, então "minha" mostraria
+   * zero sedes pra ele — abre em "todas" (ele pode ver todas de qualquer
+   * jeito, o seletor fica só como conveniência de navegação pra ele).
+   */
+  readonly escopo = signal<EscopoSedes>(
+    this.auth.usuario()?.perfil === 'ADMINISTRADOR' ? 'todas' : 'minha',
+  );
   readonly estado = signal<EstadoTela>('carregando');
   readonly resumo = signal<DashboardResumo | null>(null);
 
-  /** Administrador não tem "minha sede" — o filtro não faz sentido pra ele. */
-  readonly mostrarSeletorDeEscopo = computed(
-    () => this.auth.usuario()?.perfil !== 'ADMINISTRADOR',
+  /** Cadastro de vagas (docs/features/cadastro-vagas.md) é só Administrador. */
+  readonly souAdministrador = computed(
+    () => this.auth.usuario()?.perfil === 'ADMINISTRADOR',
   );
 
   ngOnInit(): void {

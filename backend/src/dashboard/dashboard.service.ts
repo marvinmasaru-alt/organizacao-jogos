@@ -47,8 +47,14 @@ export class DashboardService {
     const vagasDoDia = (await this.vagasService.listarPorData(data)).filter(
       (v) => sedeIds.has(v.sedeId),
     );
-    const vagasComDisponibilidade =
+    const todasVagasComDisponibilidade =
       await this.vagasService.calcularDisponibilidade(vagasDoDia);
+    // Vaga CANCELADA nunca deve contar como pendência/disponibilidade —
+    // continua existindo no banco (nunca é apagada), só some da visão
+    // operacional do dia (docs/features/cadastro-vagas.md, seção 14).
+    const vagasComDisponibilidade = todasVagasComDisponibilidade.filter(
+      (v) => v.status !== StatusVaga.CANCELADA,
+    );
     const vagaIdsDoDia = new Set(vagasComDisponibilidade.map((v) => v.id));
 
     const faltasUrgentes = (

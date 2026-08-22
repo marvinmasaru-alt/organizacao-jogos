@@ -1,5 +1,8 @@
 <header class="cabecalho">
   <h1>Dashboard</h1>
+  @if (souAdministrador()) {
+    <a class="link-configurar-vagas" routerLink="/configuracoes-vagas">⚙ Configurar vagas</a>
+  }
   <div class="seletor-data">
     <button type="button" (click)="irParaDataAnterior()" aria-label="Dia anterior">←</button>
     <input
@@ -11,17 +14,15 @@
     <button type="button" (click)="irParaProximaData()" aria-label="Próximo dia">→</button>
   </div>
 
-  @if (mostrarSeletorDeEscopo()) {
-    <select
-      class="seletor-escopo"
-      [value]="escopo()"
-      (change)="selecionarEscopo($any($event.target).value)"
-      aria-label="Filtrar sedes"
-    >
-      <option value="todas">Todas as sedes</option>
-      <option value="minha">Minha sede</option>
-    </select>
-  }
+  <select
+    class="seletor-escopo"
+    [value]="escopo()"
+    (change)="selecionarEscopo($any($event.target).value)"
+    aria-label="Filtrar sedes"
+  >
+    <option value="minha">Minhas sedes</option>
+    <option value="todas">Todas as sedes</option>
+  </select>
 </header>
 
 @switch (estado()) {

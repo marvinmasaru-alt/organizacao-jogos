@@ -76,6 +76,14 @@ export const routes: Routes = [
             (m) => m.HistoricoComponent,
           ),
       },
+      {
+        path: 'configuracoes-vagas',
+        canActivate: [perfilGuard(['ADMINISTRADOR'])],
+        loadComponent: () =>
+          import(
+            './features/configuracoes-vagas/configuracoes-vagas.component'
+          ).then((m) => m.ConfiguracoesVagasComponent),
+      },
     ],
   },
   { path: '**', redirectTo: 'dashboard' },

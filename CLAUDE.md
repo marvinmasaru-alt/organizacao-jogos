@@ -152,12 +152,16 @@ para os comentários completos):
 - **Sem restrição de visibilidade**: todo usuário logado (Administrador ou
   qualquer Responsável) pode ver todas as sedes, sem limite —
   `responsavel_id` identifica quem administra a sede, não quem pode vê-la.
-- Dashboard tem um filtro opt-in "Minha sede" / "Todas as sedes" — para
-  Responsável, a tela abre com "Minha sede" selecionado por padrão (só
-  reflete o que ele mais usa no dia a dia; ele pode trocar pra "Todas as
-  sedes" a qualquer momento, é conveniência de visualização, não controle
-  de acesso). Administrador não tem sede própria, então o filtro não se
-  aplica a ele — sempre vê todas.
+- Dashboard tem um filtro opt-in "Minhas sedes" / "Todas as sedes" (dropdown
+  à direita do seletor de data), visível pra **qualquer** perfil — é
+  conveniência de visualização, não controle de acesso (o backend já libera
+  ver todas as sedes pra qualquer usuário logado, o filtro só restringe o
+  que a tela mostra). Padrão por perfil:
+  - Responsável abre em "Minhas sedes" (reflete o que ele mais usa no dia a
+    dia; pode trocar pra "Todas as sedes" a qualquer momento);
+  - Administrador não tem sede própria — "Minhas sedes" mostraria zero
+    sedes pra ele, então a tela dele abre em "Todas as sedes" por padrão
+    (mas ele também pode trocar o seletor, mesmo sem ter sede associada).
 - Board deve exibir o link de localização (`endereco`) de forma clicável.
 
 ### Vagas

@@ -5,14 +5,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { StatusFuncionario } from '@prisma/client';
+import { StatusFuncionario, StatusVaga } from '@prisma/client';
 import {
   AlocacoesService,
   NovaAlocacaoInput,
 } from '../alocacoes/alocacoes.service';
 import { Alocacao } from '../alocacoes/alocacao.entity';
 import { UsuarioAutenticado } from '../auth/auth.service';
-import { PerfilUsuario } from '../common/types/enums';
 import { ItemAlocacaoDto } from '../alocacoes/dto/criar-alocacao.dto';
 import { FuncionariosService } from '../funcionarios/funcionarios.service';
 import { Vaga } from '../vagas/vaga.entity';
@@ -47,13 +46,18 @@ export class AlocarService {
     itens: ItemAlocacaoDto[],
     usuario: UsuarioAutenticado,
   ): Promise<Alocacao[]> {
-    if (usuario.perfil !== PerfilUsuario.RESPONSAVEL || !usuario.responsavelId) {
+    // `responsavelId` é quem importa aqui, não o perfil — um Administrador
+    // que também é um dos responsáveis (ex.: Paulo) tem `responsavelId`
+    // preenchido (ver AuthService) e aloca em nome desse responsável,
+    // igual qualquer RESPONSAVEL. Sem `responsavelId`, ninguém aloca.
+    if (!usuario.responsavelId) {
       throw new ForbiddenException(
-        'Apenas um responsável autenticado pode criar alocações.',
+        'Apenas um usuário vinculado a um responsável pode criar alocações.',
       );
     }
 
     const vagasMap = await this.carregarVagas(itens);
+    this.validarVagasNaoCanceladas(vagasMap);
     this.validarCapacidadePorVaga(itens, await this.calcularDisponibilidade(vagasMap));
 
     const funcionariosUsados = new Set<string>();
@@ -147,6 +151,17 @@ export class AlocarService {
     return new Map(
       vagasComDisponibilidade.map((v) => [v.id, v.disponiveis]),
     );
+  }
+
+  /** Vaga CANCELADA nunca aceita nova alocação (docs/features/cadastro-vagas.md, Regra 6/seção 14). */
+  private validarVagasNaoCanceladas(vagasMap: Map<string, Vaga>): void {
+    for (const vaga of vagasMap.values()) {
+      if (vaga.status === StatusVaga.CANCELADA) {
+        throw new BadRequestException(
+          `Esta vaga foi cancelada e não aceita novas alocações.`,
+        );
+      }
+    }
   }
 
   /** Nunca pode ultrapassar `faltam` de uma vaga — nem somando os itens do próprio lote. */

@@ -1,0 +1,311 @@
+<header class="cabecalho">
+  <a class="link-voltar-dashboard" routerLink="/dashboard">← Dashboard</a>
+  <h1>Cadastro de Vagas</h1>
+</header>
+
+<section class="secao" aria-label="Configurações fixas">
+  <h2>Configurações fixas</h2>
+  <p class="ajuda">
+    Padrão recorrente de uma sede (ex.: 6 Manpower + 1 Forklift, de segunda a
+    sexta). Necessidades pontuais de um dia específico não devem alterar a
+    configuração fixa — use "Vaga esporádica" abaixo para isso.
+  </p>
+
+  @if (estadoSedes() === 'carregado') {
+    <select
+      class="filtro-sede"
+      [value]="filtroSedeId()"
+      (change)="selecionarFiltroSede($any($event.target).value)"
+      aria-label="Filtrar configurações por sede"
+    >
+      <option value="">Todas as sedes</option>
+      @for (sede of sedes(); track sede.id) {
+        <option [value]="sede.id">{{ sede.nome }}</option>
+      }
+    </select>
+  }
+
+  @switch (estadoConfiguracoes()) {
+    @case ('carregando') {
+      <p class="estado">Carregando…</p>
+    }
+    @case ('erro') {
+      <p class="estado estado--erro">Não foi possível carregar as configurações.</p>
+    }
+    @case ('carregado') {
+      @if (configuracoes().length === 0) {
+        <p class="estado">Nenhuma configuração cadastrada.</p>
+      } @else {
+        <ul class="lista-configuracoes">
+          @for (config of configuracoes(); track config.id) {
+            <li class="config-item">
+              <button
+                type="button"
+                class="config-item__resumo"
+                (click)="alternarExpansaoConfig(config.id)"
+              >
+                {{ configuracoesExpandidas().has(config.id) ? '▾' : '▸' }}
+                <strong>{{ config.nome }}</strong>
+                <span class="config-item__sede">{{ nomeSede(config.sedeId) }}</span>
+              </button>
+
+              @if (configuracoesExpandidas().has(config.id)) {
+                <div class="config-item__detalhes">
+                  <div class="config-item__tipos">
+                    @for (tipo of config.tipos; track tipo.tipoTrabalho) {
+                      <span>{{ tipo.tipoTrabalho }}: {{ tipo.quantidade }}</span>
+                    }
+                  </div>
+                  <div class="config-item__dias">Opera: {{ labelDias(config.diasSemana) }}</div>
+                  @if (config.dataInicio || config.dataFim) {
+                    <div class="config-item__periodo">
+                      Vigência: {{ config.dataInicio ?? '—' }} até {{ config.dataFim ?? '—' }}
+                    </div>
+                  }
+                  <button type="button" class="botao-inativar" (click)="inativarConfiguracao(config.id)">
+                    Inativar
+                  </button>
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      }
+    }
+  }
+
+  <h3>Nova configuração fixa</h3>
+  <form class="form" (submit)="$event.preventDefault(); criarConfiguracao()">
+    <label>
+      Sede
+      <select
+        [value]="novaConfigSedeId()"
+        (change)="novaConfigSedeId.set($any($event.target).value)"
+        required
+      >
+        <option value="" disabled>Selecione…</option>
+        @for (sede of sedes(); track sede.id) {
+          <option [value]="sede.id">{{ sede.nome }}</option>
+        }
+      </select>
+    </label>
+
+    <label>
+      Nome da configuração
+      <input
+        type="text"
+        placeholder="Ex.: Operação padrão"
+        [value]="novaConfigNome()"
+        (input)="novaConfigNome.set($any($event.target).value)"
+      />
+    </label>
+
+    <fieldset class="linhas-tipo">
+      <legend>Tipos e quantidades</legend>
+      @for (linha of novaConfigTipos(); track $index) {
+        <div class="linha-tipo">
+          <select
+            [value]="linha.tipoTrabalho"
+            (change)="atualizarLinhaConfig($index, 'tipoTrabalho', $any($event.target).value)"
+          >
+            <option value="MANPOWER">Manpower</option>
+            <option value="FORKLIFT">Forklift</option>
+          </select>
+          <input
+            type="number"
+            min="1"
+            [value]="linha.quantidade"
+            (input)="atualizarLinhaConfig($index, 'quantidade', $any($event.target).value)"
+          />
+          @if (novaConfigTipos().length > 1) {
+            <button type="button" (click)="removerLinhaConfig($index)">Remover</button>
+          }
+        </div>
+      }
+      <button type="button" class="botao-adicionar" (click)="adicionarLinhaConfig()">
+        + Adicionar tipo
+      </button>
+    </fieldset>
+
+    <fieldset class="dias-semana">
+      <legend>Dias em que a sede opera</legend>
+      @for (dia of diasSemana; track dia.valor) {
+        <label class="dia-checkbox">
+          <input
+            type="checkbox"
+            [checked]="novaConfigDias().has(dia.valor)"
+            (change)="alternarDia(dia.valor)"
+          />
+          {{ dia.label }}
+        </label>
+      }
+    </fieldset>
+
+    <div class="periodo">
+      <label>
+        Vigência início (opcional)
+        <input
+          type="date"
+          [value]="novaConfigDataInicio()"
+          (change)="novaConfigDataInicio.set($any($event.target).value)"
+        />
+      </label>
+      <label>
+        Vigência fim (opcional)
+        <input
+          type="date"
+          [value]="novaConfigDataFim()"
+          (change)="novaConfigDataFim.set($any($event.target).value)"
+        />
+      </label>
+    </div>
+
+    <label>
+      Observação (opcional)
+      <input
+        type="text"
+        [value]="novaConfigObservacao()"
+        (input)="novaConfigObservacao.set($any($event.target).value)"
+      />
+    </label>
+
+    @if (erroConfig()) {
+      <p class="estado estado--erro">{{ erroConfig() }}</p>
+    }
+
+    <button
+      type="submit"
+      class="botao-confirmar"
+      [disabled]="!podeCriarConfig() || enviandoConfig()"
+    >
+      {{ enviandoConfig() ? 'Salvando…' : 'Criar configuração' }}
+    </button>
+  </form>
+</section>
+
+<section class="secao" aria-label="Vaga esporádica">
+  <h2>Vaga esporádica</h2>
+  <p class="ajuda">
+    Necessidade pontual para uma data específica. Não altera nenhuma
+    configuração fixa da sede.
+  </p>
+
+  <form class="form" (submit)="$event.preventDefault(); criarVagaEsporadica()">
+    <label>
+      Sede
+      <select
+        [value]="esporadicaSedeId()"
+        (change)="esporadicaSedeId.set($any($event.target).value)"
+        required
+      >
+        <option value="" disabled>Selecione…</option>
+        @for (sede of sedes(); track sede.id) {
+          <option [value]="sede.id">{{ sede.nome }}</option>
+        }
+      </select>
+    </label>
+
+    <label>
+      Data
+      <input
+        type="date"
+        [value]="esporadicaData()"
+        (change)="selecionarDataVagas($any($event.target).value)"
+      />
+    </label>
+
+    <fieldset class="linhas-tipo">
+      <legend>Tipos e quantidades</legend>
+      @for (linha of esporadicaTipos(); track $index) {
+        <div class="linha-tipo">
+          <select
+            [value]="linha.tipoTrabalho"
+            (change)="atualizarLinhaEsporadica($index, 'tipoTrabalho', $any($event.target).value)"
+          >
+            <option value="MANPOWER">Manpower</option>
+            <option value="FORKLIFT">Forklift</option>
+          </select>
+          <input
+            type="number"
+            min="1"
+            [value]="linha.quantidade"
+            (input)="atualizarLinhaEsporadica($index, 'quantidade', $any($event.target).value)"
+          />
+          @if (esporadicaTipos().length > 1) {
+            <button type="button" (click)="removerLinhaEsporadica($index)">Remover</button>
+          }
+        </div>
+      }
+      <button type="button" class="botao-adicionar" (click)="adicionarLinhaEsporadica()">
+        + Adicionar tipo
+      </button>
+    </fieldset>
+
+    <label>
+      Observação (opcional)
+      <input
+        type="text"
+        [value]="esporadicaObservacao()"
+        (input)="esporadicaObservacao.set($any($event.target).value)"
+      />
+    </label>
+
+    @if (erroEsporadica()) {
+      <p class="estado estado--erro">{{ erroEsporadica() }}</p>
+    }
+    @if (mensagemEsporadica()) {
+      <p class="estado estado--sucesso">{{ mensagemEsporadica() }}</p>
+    }
+
+    <button
+      type="submit"
+      class="botao-confirmar"
+      [disabled]="!podeCriarEsporadica() || enviandoEsporadica()"
+    >
+      {{ enviandoEsporadica() ? 'Salvando…' : 'Criar vaga esporádica' }}
+    </button>
+  </form>
+
+  <h3>Vagas de {{ esporadicaData() }}</h3>
+  @switch (estadoVagasDoDia()) {
+    @case ('carregando') {
+      <p class="estado">Carregando…</p>
+    }
+    @case ('erro') {
+      <p class="estado estado--erro">Não foi possível carregar as vagas.</p>
+    }
+    @case ('carregado') {
+      @if (vagasDoDia().length === 0) {
+        <p class="estado">Nenhuma vaga encontrada para esta data.</p>
+      } @else {
+        <ul class="lista-vagas">
+          @for (vaga of vagasDoDia(); track vaga.id) {
+            <li class="vaga-item" [class.vaga-item--cancelada]="vaga.status === 'CANCELADA'">
+              <button
+                type="button"
+                class="vaga-item__resumo"
+                (click)="alternarExpansaoVaga(vaga.id)"
+              >
+                {{ vagasExpandidas().has(vaga.id) ? '▾' : '▸' }}
+                {{ nomeSede(vaga.sedeId) }} — {{ vaga.tipo }}
+                <span class="vaga-item__status">{{ vaga.status }}</span>
+              </button>
+
+              @if (vagasExpandidas().has(vaga.id)) {
+                <div class="vaga-item__detalhes">
+                  <span>Quantidade: {{ vaga.quantidade }}</span>
+                  <span class="vaga-item__origem">Origem: {{ vaga.origem }}</span>
+                  @if (vaga.status !== 'CANCELADA') {
+                    <button type="button" class="botao-inativar" (click)="cancelarVaga(vaga.id)">
+                      Cancelar
+                    </button>
+                  }
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      }
+    }
+  }
+</section>

@@ -34,8 +34,6 @@ async function main() {
       tipo: TipoUsuario.ADMIN,
     },
   });
-
-  console.log(`Administrador pronto: ${usuario.email} (id ${usuario.id}).`);
 }
 
 main()

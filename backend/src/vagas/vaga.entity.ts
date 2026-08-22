@@ -12,6 +12,9 @@ import { StatusVaga, TipoTrabalho } from '@prisma/client';
  * verdade, usado só internamente (AlocarService) pra gravar
  * `alocacoes.vaga_id`.
  */
+/** Origem da vaga (docs/features/cadastro-vagas.md, seção 12) — derivado de `modeloVagaId` ser nulo ou não, sem coluna própria. */
+export type OrigemVaga = 'FIXA' | 'ESPORADICA';
+
 export interface Vaga {
   id: string; // vaga_tipos.id
   vagaRealId: string; // vagas.id
@@ -20,6 +23,7 @@ export interface Vaga {
   tipo: TipoTrabalho;
   quantidade: number;
   status: StatusVaga;
+  origem: OrigemVaga;
 }
 
 /** Visão calculada usada pelo Board (nunca contar todas as linhas de ALOCACOES). */
