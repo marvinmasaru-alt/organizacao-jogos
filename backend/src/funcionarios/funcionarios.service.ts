@@ -60,6 +60,28 @@ export class FuncionariosService {
     const permitidos =
       await this.listarDisponiveisParaResponsavel(responsavelId);
 
+    // Sede/dia já finalizado: ninguém é selecionável — nem chega a rodar a
+    // checagem de situação individual (AlocarService também rejeita no
+    // POST, isso aqui só evita montar um lote que vai falhar no fim).
+    const vagaTipo = await this.prisma.vagaTipo.findUnique({
+      where: { id: vagaId },
+      include: { vaga: true },
+    });
+    if (vagaTipo) {
+      const conferencia = await this.prisma.conferenciaDia.findUnique({
+        where: {
+          sedeId_data: { sedeId: vagaTipo.vaga.sedeId, data: vagaTipo.vaga.data },
+        },
+      });
+      if (conferencia?.finalizadoEm != null) {
+        return permitidos.map((f) => ({
+          ...f,
+          situacao: SituacaoParaAlocacao.CONFERENCIA_FINALIZADA,
+          selecionavel: false,
+        }));
+      }
+    }
+
     return Promise.all(
       permitidos.map(async (f) => {
         const alocacoesDoFuncionario =
@@ -83,7 +105,14 @@ export class FuncionariosService {
 
         let situacao = SituacaoParaAlocacao.DISPONIVEL;
         if (nestaVaga) {
-          if (confirmacaoNestaVaga?.status === StatusConfirmacao.FALTOU) {
+          // SUBSTITUICAO_NECESSARIA é a mesma situação de FALTOU (a pessoa
+          // não compareceu), só marcada como urgente — tratar igual aqui,
+          // senão o funcionário aparece como "já alocado" numa vaga que na
+          // real está livre pra receber um substituto.
+          if (
+            confirmacaoNestaVaga?.status === StatusConfirmacao.FALTOU ||
+            confirmacaoNestaVaga?.status === StatusConfirmacao.SUBSTITUICAO_NECESSARIA
+          ) {
             situacao = SituacaoParaAlocacao.FALTOU_NESTA_VAGA;
           } else {
             situacao = SituacaoParaAlocacao.JA_ALOCADO_NESTA_VAGA;

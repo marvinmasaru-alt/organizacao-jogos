@@ -27,6 +27,13 @@ export enum SituacaoParaAlocacao {
   JA_ALOCADO_NESTA_VAGA = 'JA_ALOCADO_NESTA_VAGA',
   CANCELOU_NESTA_VAGA = 'CANCELOU_NESTA_VAGA',
   FALTOU_NESTA_VAGA = 'FALTOU_NESTA_VAGA',
+  /**
+   * Sede/dia já finalizado na Confirmação do Dia (docs/features/confirmacao-dia.md,
+   * seção 28.1) — ninguém é selecionável, `AlocarService` também rejeita
+   * (defesa em profundidade), mas aqui já barra na origem em vez de deixar
+   * o responsável montar o lote todo pra só falhar no fim.
+   */
+  CONFERENCIA_FINALIZADA = 'CONFERENCIA_FINALIZADA',
 }
 
 export interface FuncionarioParaAlocacao extends Funcionario {

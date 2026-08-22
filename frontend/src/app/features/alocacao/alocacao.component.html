@@ -142,7 +142,7 @@
                         class="funcionario-item"
                         [class.funcionario-item--cancelou]="f.situacao === 'CANCELOU_NESTA_VAGA'"
                         [class.funcionario-item--faltou]="f.situacao === 'FALTOU_NESTA_VAGA'"
-                        [class.funcionario-item--riscado]="f.situacao === 'ALOCADO_OUTRA_VAGA'"
+                        [class.funcionario-item--riscado]="f.situacao === 'ALOCADO_OUTRA_VAGA' || f.situacao === 'CONFERENCIA_FINALIZADA'"
                         [class.funcionario-item--ja-alocado]="f.situacao === 'JA_ALOCADO_NESTA_VAGA'"
                       >
                         <label class="funcionario-item__linha">
@@ -159,6 +159,7 @@
                               @case ('FALTOU_NESTA_VAGA') { <em>(Faltou) — Indisponível para esta vaga</em> }
                               @case ('ALOCADO_OUTRA_VAGA') { <em>Já alocado em outra vaga nesta data</em> }
                               @case ('JA_ALOCADO_NESTA_VAGA') { <em>Já alocado nesta vaga</em> }
+                              @case ('CONFERENCIA_FINALIZADA') { <em>Conferência do dia já finalizada — indisponível para alocação</em> }
                               @default { <em>Disponível</em> }
                             }
                           </span>

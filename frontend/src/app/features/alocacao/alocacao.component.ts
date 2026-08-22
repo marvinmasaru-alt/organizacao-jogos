@@ -29,6 +29,7 @@ type EstadoAlocados = 'carregando' | 'erro' | 'carregado';
  * numa sede diferente.
  */
 const PRIORIDADE_SITUACAO: SituacaoParaAlocacao[] = [
+  'CONFERENCIA_FINALIZADA',
   'JA_ALOCADO_NESTA_VAGA',
   'CANCELOU_NESTA_VAGA',
   'FALTOU_NESTA_VAGA',
