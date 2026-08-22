@@ -115,6 +115,36 @@
   font-weight: 600;
 }
 
+.finalizado-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  background: #e6f4ea;
+  color: #1a7f37;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.botao-reabrir {
+  margin-left: auto;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #1a7f37;
+  border-radius: 6px;
+  background: none;
+  color: #1a7f37;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled {
+    border-color: #ccc;
+    color: #ccc;
+    cursor: not-allowed;
+  }
+}
+
 .resumo-tipos {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -134,37 +164,6 @@
   color: #b00020;
   font-weight: 600;
   margin-top: 0.25rem;
-}
-
-.botao-confirmar-todos {
-  padding: 0.5rem 1rem;
-  border: 1px solid #1565c0;
-  border-radius: 6px;
-  background: none;
-  color: #1565c0;
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-
-  &:disabled {
-    border-color: #ccc;
-    color: #ccc;
-    cursor: not-allowed;
-  }
-}
-
-.dialogo {
-  margin-top: 0.75rem;
-  padding: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: #fafafa;
-}
-
-.dialogo__acoes {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
 }
 
 .lista-funcionarios {
@@ -217,7 +216,27 @@
   color: #b00020;
 }
 
-.botao-confirmar,
+.funcionario-item__status--roxo {
+  background: #f3e8fd;
+  color: #6a1fb0;
+}
+
+.loader {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid #ddd;
+  border-top-color: #1565c0;
+  border-radius: 50%;
+  animation: girar 0.6s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .botao-finalizar {
   margin-top: 1rem;
   padding: 0.75rem 1.25rem;

@@ -66,6 +66,30 @@
             </p>
           }
 
+          @if (erroAlterarSituacao()) {
+            <p class="estado estado--erro">{{ erroAlterarSituacao() }}</p>
+          }
+
+          @if (estaFinalizada()) {
+            <p class="finalizado-banner">
+              ✓ Conferência finalizada{{ d.finalizadoEm ? ' em ' + (d.finalizadoEm | date: 'dd/MM/yyyy HH:mm') : '' }}
+              — não é mais possível alterar a situação dos funcionários.
+              @if (ehAdministrador()) {
+                <button
+                  type="button"
+                  class="botao-reabrir"
+                  [disabled]="reabrindo()"
+                  (click)="reabrirConferencia()"
+                >
+                  {{ reabrindo() ? 'Reabrindo…' : 'Reabrir conferência' }}
+                </button>
+              }
+            </p>
+            @if (erroReabrir()) {
+              <p class="estado estado--erro">{{ erroReabrir() }}</p>
+            }
+          }
+
           <div class="resumo-tipos">
             @for (resumo of d.resumoPorTipo; track resumo.tipoTrabalho) {
               <div class="resumo-card">
@@ -74,7 +98,7 @@
                 <span>Alocados: {{ resumo.alocados }}</span>
                 <span>Trabalharam: {{ resumo.trabalharam }}</span>
                 <span>Pendentes: {{ resumo.pendentes }}</span>
-                @if (resumo.substituicoesNecessarias > 0) {
+                @if (resumo.substituicoesNecessarias > 0 && !estaFinalizada()) {
                   <span class="resumo-card__substituicao">
                     ⚠ {{ resumo.substituicoesNecessarias }} substituição(ões) necessária(s)
                   </span>
@@ -82,36 +106,6 @@
               </div>
             }
           </div>
-
-          <button
-            type="button"
-            class="botao-confirmar-todos"
-            [disabled]="pendentesRestantes() === 0"
-            (click)="abrirConfirmarTodos()"
-          >
-            Todos trabalharam
-          </button>
-
-          @if (mostrarConfirmarTodos()) {
-            <div class="dialogo">
-              <p>
-                Você está confirmando que todos os funcionários pendentes
-                nesta sede trabalharam no dia {{ data() }}.
-              </p>
-              <p>Total pendente: {{ pendentesRestantes() }}</p>
-              <div class="dialogo__acoes">
-                <button type="button" (click)="cancelarConfirmarTodos()">Cancelar</button>
-                <button
-                  type="button"
-                  class="botao-confirmar"
-                  [disabled]="confirmandoTodos()"
-                  (click)="confirmarTodos()"
-                >
-                  {{ confirmandoTodos() ? 'Confirmando…' : 'Confirmar' }}
-                </button>
-              </div>
-            </div>
-          }
 
           @for (grupo of funcionariosPorTipo(); track grupo.resumo.tipoTrabalho) {
             <h3>{{ grupo.resumo.tipoTrabalho }}</h3>
@@ -123,15 +117,20 @@
                     {{ rotuloDoStatus(f.status) }}
                   </span>
                   <select
-                    [value]="f.status === 'PRESENTE' ? 'TRABALHOU' : f.status"
-                    [disabled]="salvando().has(f.alocacaoId)"
+                    [value]="valorSelecao(f)"
+                    [disabled]="salvando().has(f.alocacaoId) || estaFinalizada()"
                     (change)="alterarSituacao(f, $any($event.target).value)"
                   >
                     <option value="" disabled>Alterar…</option>
                     <option value="TRABALHOU">Trabalhou</option>
+                    <option value="SUBSTITUIU">Substituiu (cobriu urgência)</option>
                     <option value="CANCELOU">Cancelou</option>
                     <option value="FALTOU">Faltou</option>
+                    <option value="FALTOU_URGENTE">Faltou — substituição urgente</option>
                   </select>
+                  @if (salvando().has(f.alocacaoId)) {
+                    <span class="loader" role="status" aria-label="Salvando…"></span>
+                  }
                 </li>
               }
             </ul>
@@ -144,14 +143,16 @@
             <p class="estado estado--sucesso">{{ mensagemFinalizar() }}</p>
           }
 
-          <button
-            type="button"
-            class="botao-finalizar"
-            [disabled]="!podeFinalizar() || finalizando()"
-            (click)="finalizarConferencia()"
-          >
-            {{ finalizando() ? 'Finalizando…' : 'Finalizar conferência' }}
-          </button>
+          @if (!estaFinalizada()) {
+            <button
+              type="button"
+              class="botao-finalizar"
+              [disabled]="!podeFinalizar() || finalizando()"
+              (click)="finalizarConferencia()"
+            >
+              {{ finalizando() ? 'Finalizando…' : 'Finalizar conferência' }}
+            </button>
+          }
         }
       }
     }

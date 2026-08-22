@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { StatusVaga } from '@prisma/client';
 import { AlocacoesService } from '../alocacoes/alocacoes.service';
 import { PerfilUsuario } from '../common/types/enums';
+import { PrismaService } from '../prisma/prisma.service';
 import { SedesService } from '../sedes/sedes.service';
 import { VagasService } from '../vagas/vagas.service';
 import { UsuarioAutenticado } from '../auth/auth.service';
@@ -26,6 +27,7 @@ export class DashboardService {
     private readonly sedesService: SedesService,
     private readonly vagasService: VagasService,
     private readonly alocacoesService: AlocacoesService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async resumoPorData(
@@ -55,13 +57,24 @@ export class DashboardService {
     const vagasComDisponibilidade = todasVagasComDisponibilidade.filter(
       (v) => v.status !== StatusVaga.CANCELADA,
     );
-    const vagaIdsDoDia = new Set(vagasComDisponibilidade.map((v) => v.id));
+    const siglaPorSedeId = new Map(sedes.map((s) => [s.id, s.sigla]));
+
+    // Sede/dia já finalizado (docs/features/confirmacao-dia.md, seção
+    // 28.1) não deve mais acender o alerta de urgência no Dashboard — a
+    // tela de conferência trava ali, e mostrar "🔴 Urgente" pra uma sede
+    // já dada como concluída confunde o responsável.
+    const sedesFinalizadasHoje = await this.prisma.conferenciaDia.findMany({
+      where: { data: new Date(data), finalizadoEm: { not: null } },
+      select: { sedeId: true },
+    });
+    const sedeIdsFinalizadas = new Set(sedesFinalizadasHoje.map((c) => c.sedeId));
 
     const faltasUrgentes = (
       await this.alocacoesService.listarFaltasUrgentesPorData(data)
-    ).filter((a) => vagaIdsDoDia.has(a.vagaTipoId));
-
-    const siglaPorSedeId = new Map(sedes.map((s) => [s.id, s.sigla]));
+    ).filter((a) => {
+      const vaga = vagasComDisponibilidade.find((v) => v.id === a.vagaTipoId);
+      return !!vaga && !sedeIdsFinalizadas.has(vaga.sedeId);
+    });
 
     const sedeIdsComFaltaUrgente = new Set(
       faltasUrgentes.map((a) => {
@@ -141,8 +154,14 @@ export class DashboardService {
       },
       sedes: sedesComVagas,
       pendencias: {
+        // Sede/dia já finalizado sai da lista de pendências — a vaga
+        // continua aparecendo como incompleta no card "vagas de hoje"
+        // (sedesComVagas, acima), só não é mais cobrada como algo a
+        // resolver: a conferência daquela sede/dia já foi encerrada.
         vagasIncompletas: vagasComDisponibilidade
-          .filter((v) => v.status === StatusVaga.ABERTA)
+          .filter(
+            (v) => v.status === StatusVaga.ABERTA && !sedeIdsFinalizadas.has(v.sedeId),
+          )
           .map((v) => ({
             vagaId: v.id,
             sedeId: v.sedeId,

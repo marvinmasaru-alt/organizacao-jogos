@@ -173,8 +173,10 @@ para os comentários completos):
   logado vê todas as vagas, sem limite.
 - `disponíveis = vaga_tipos.quantidade - alocações válidas` (nunca
   negativo). "Válida" = `alocacoes.status = ATIVA` **e** a confirmação
-  associada (se houver) não é `FALTOU` — quem faltou libera a posição sem
-  cancelar a alocação em si.
+  associada (se houver) não é `FALTOU` nem `SUBSTITUICAO_NECESSARIA` — as
+  duas são a mesma situação (a pessoa não compareceu), só que a segunda é
+  a variante marcada como urgente; ambas liberam a posição sem cancelar a
+  alocação em si.
 - Board principal deve mostrar de forma resumida por sede: tipo, `X/Y`,
   "✓ Completo" ou "N vagas disponíveis".
 - Existe visão detalhada por sede mostrando, posição a posição, quem está
@@ -201,7 +203,7 @@ para os comentários completos):
 - Falta e cancelamento **não vivem mais em `alocacoes`** — moram em
   `confirmacoes` (1:1 com `alocacoes`, criada junto com toda alocação nova),
   com `status` (`PENDENTE`/`PRESENTE`/`FALTOU`/`CANCELOU`/
-  `SUBSTITUICAO_NECESSARIA`), `observacao`, `confirmado_por`,
+  `SUBSTITUICAO_NECESSARIA`/`SUBSTITUIU`), `observacao`, `confirmado_por`,
   `confirmado_em`.
 - **Nunca apagar** a linha de alocação nem a de confirmação.
 - Ao cancelar: `alocacoes.status → CANCELADA` **e**
@@ -228,6 +230,16 @@ para os comentários completos):
 - Administrador deve conseguir consultar histórico completo de
   cancelamentos (funcionário, vaga, data, responsável, data/motivo do
   cancelamento — motivo/quem confirmou/quando vêm de `confirmacoes`).
+- **Substituição de urgência resolvida — `SUBSTITUIU`**: quando alguém
+  cobre uma vaga com `SUBSTITUICAO_NECESSARIA`, essa pessoa é alocada
+  normalmente (o slot já está livre — `FALTOU`/`SUBSTITUICAO_NECESSARIA`
+  não conta como "preenchida") e sua própria confirmação é marcada
+  `SUBSTITUIU`, não `TRABALHOU`. `SUBSTITUIU` é elegível a pagamento igual
+  `TRABALHOU`, mas abate 1 da contagem de substituições urgentes daquele
+  tipo de trabalho na mesma sede/dia (nunca deixa passar de zero) e tem
+  rótulo/cor próprios na tela. **O registro original de quem faltou nunca é
+  sobrescrito** — continua `FALTOU`/`SUBSTITUICAO_NECESSARIA` para sempre,
+  a resolução vive só na alocação nova do substituto.
 
 ### Pagamentos
 - Tabela `pagamentos`: tipo, responsavel_id, alocacao_id (1:1), funcionario_id,
@@ -257,11 +269,6 @@ Vale para alocações, confirmações (cancelamentos/faltas) e pagamentos.
   `modelo_vaga_dias` / `modelo_vaga_tipos` (vagas fixas/recorrentes) — as
   tabelas existem no schema, mas não há serviço/rota implementando a
   geração ainda.
-- Fluxo exato de substituição urgente: provavelmente mantém o registro
-  original da falta (`confirmacoes.status = SUBSTITUICAO_NECESSARIA`) e
-  cria uma **nova** alocação (+ confirmação) para o substituto, em vez de
-  sobrescrever o registro original — mas isso ainda não está 100% fechado.
-
 ## Setup inicial necessário (fora do código)
 
 1. Criar um banco PostgreSQL (ex.: Railway) e aplicar o schema —

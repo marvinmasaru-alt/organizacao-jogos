@@ -1,6 +1,8 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PerfisGuard, PerfisPermitidos } from '../auth/guards/perfis.guard';
 import { UsuarioAutenticado } from '../auth/auth.service';
+import { PerfilUsuario } from '../common/types/enums';
 import { ConfirmacoesService } from './confirmacoes.service';
 import { AtualizarSituacaoDto, SedeDataDto } from './dto/atualizar-situacao.dto';
 
@@ -41,16 +43,20 @@ export class ConfirmacoesController {
       dto.status,
       req.user,
       dto.observacao,
+      dto.necessitaSubstituicaoUrgente,
     );
-  }
-
-  @Post('todos')
-  confirmarTodos(@Body() dto: SedeDataDto, @Req() req: RequestComSessao) {
-    return this.service.confirmarTodos(dto.sedeId, dto.data, req.user);
   }
 
   @Post('finalizar')
   finalizar(@Body() dto: SedeDataDto, @Req() req: RequestComSessao) {
     return this.service.finalizar(dto.sedeId, dto.data, req.user);
+  }
+
+  /** Só Administrador reabre uma conferência já finalizada (seção 28.1). */
+  @Post('reabrir')
+  @UseGuards(JwtAuthGuard, PerfisGuard)
+  @PerfisPermitidos(PerfilUsuario.ADMINISTRADOR)
+  reabrir(@Body() dto: SedeDataDto, @Req() req: RequestComSessao) {
+    return this.service.reabrir(dto.sedeId, dto.data, req.user);
   }
 }

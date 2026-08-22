@@ -1,5 +1,11 @@
 export type TipoTrabalho = 'MANPOWER' | 'FORKLIFT';
-export type StatusConfirmacao = 'PENDENTE' | 'PRESENTE' | 'FALTOU' | 'CANCELOU' | 'SUBSTITUICAO_NECESSARIA';
+export type StatusConfirmacao =
+  | 'PENDENTE'
+  | 'PRESENTE'
+  | 'FALTOU'
+  | 'CANCELOU'
+  | 'SUBSTITUICAO_NECESSARIA'
+  | 'SUBSTITUIU';
 export type StatusDia = 'PENDENTE' | 'EM_CONFERENCIA' | 'CONFERIDO';
 
 /** Espelha backend/src/confirmacoes/confirmacao-dia.entity.ts. */
@@ -27,7 +33,13 @@ export interface ResumoTipoConfirmacao {
   necessarios: number;
   alocados: number;
   trabalharam: number;
+  /** Vagas ainda não preenchidas: `max(0, necessarios - trabalharam)`. Não é "aguardando confirmação" — ver pendentesRestantes no componente. */
   pendentes: number;
+  /**
+   * Subconjunto de `pendentes` — só quem está marcado como urgente
+   * (SUBSTITUICAO_NECESSARIA), abatendo quem já cobriu essa vaga
+   * (SUBSTITUIU).
+   */
   substituicoesNecessarias: number;
 }
 
@@ -38,7 +50,10 @@ export interface ResumoConfirmacaoSede {
   statusDia: StatusDia;
   resumoPorTipo: ResumoTipoConfirmacao[];
   funcionarios: FuncionarioConfirmacao[];
+  /** true = conferência já finalizada, tela deve bloquear novas alterações (só Admin reabre). */
+  finalizado: boolean;
+  finalizadoEm: string | null;
 }
 
 /** Rótulo aceito por PATCH /confirmacoes/:alocacaoId — `TRABALHOU` é o nome de tela pra `PRESENTE`. */
-export type NovaSituacao = 'TRABALHOU' | 'CANCELOU' | 'FALTOU';
+export type NovaSituacao = 'TRABALHOU' | 'CANCELOU' | 'FALTOU' | 'SUBSTITUIU';

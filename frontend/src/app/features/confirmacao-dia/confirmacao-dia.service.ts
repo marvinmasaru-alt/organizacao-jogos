@@ -29,22 +29,25 @@ export class ConfirmacaoDiaService {
     alocacaoId: string,
     status: NovaSituacao,
     observacao?: string,
+    necessitaSubstituicaoUrgente?: boolean,
   ): Observable<void> {
     return this.http.patch<void>(`${API_BASE_URL}/confirmacoes/${alocacaoId}`, {
       status,
       observacao,
-    });
-  }
-
-  confirmarTodos(sedeId: string, data: string): Observable<{ confirmados: number }> {
-    return this.http.post<{ confirmados: number }>(`${API_BASE_URL}/confirmacoes/todos`, {
-      sedeId,
-      data,
+      necessitaSubstituicaoUrgente,
     });
   }
 
   finalizar(sedeId: string, data: string): Observable<ResumoConfirmacaoSede> {
     return this.http.post<ResumoConfirmacaoSede>(`${API_BASE_URL}/confirmacoes/finalizar`, {
+      sedeId,
+      data,
+    });
+  }
+
+  /** Só Administrador — backend rejeita pra qualquer outro perfil. */
+  reabrir(sedeId: string, data: string): Observable<ResumoConfirmacaoSede> {
+    return this.http.post<ResumoConfirmacaoSede>(`${API_BASE_URL}/confirmacoes/reabrir`, {
       sedeId,
       data,
     });

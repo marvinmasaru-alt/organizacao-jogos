@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { AuthService } from '../../core/auth/auth.service';
 import { paraDataIso } from '../../core/utils/data.util';
 import { ConfirmacaoDiaService } from './confirmacao-dia.service';
 import {
@@ -30,6 +31,7 @@ type Estado = 'carregando' | 'erro' | 'carregado';
 export class ConfirmacaoDiaComponent implements OnInit {
   private readonly service = inject(ConfirmacaoDiaService);
   private readonly route = inject(ActivatedRoute);
+  private readonly auth = inject(AuthService);
 
   readonly data = signal(paraDataIso(new Date()));
   readonly estadoSedes = signal<Estado>('carregando');
@@ -41,23 +43,38 @@ export class ConfirmacaoDiaComponent implements OnInit {
 
   /** alocacaoId -> em processamento (desabilita o próprio dropdown enquanto salva). */
   readonly salvando = signal<Set<string>>(new Set());
-  readonly confirmandoTodos = signal(false);
-  readonly mostrarConfirmarTodos = signal(false);
   readonly finalizando = signal(false);
   readonly erroFinalizar = signal<string | null>(null);
   readonly mensagemFinalizar = signal<string | null>(null);
+  readonly reabrindo = signal(false);
+  readonly erroReabrir = signal<string | null>(null);
+  readonly erroAlterarSituacao = signal<string | null>(null);
 
   readonly sedeSelecionada = computed(() =>
     this.sedes().find((s) => s.sedeId === this.sedeSelecionadaId()) ?? null,
   );
 
+  /**
+   * "Aguardando confirmação" (situação nunca definida) — diferente do
+   * `pendentes` de cada `resumo` (que agora é "vaga ainda não preenchida",
+   * necessarios - trabalharam). Esse aqui é o que trava "Finalizar" e
+   * mostra o banner ⚠, contando em TODOS os tipos/status.
+   */
   readonly pendentesRestantes = computed(
     () => this.detalhe()?.funcionarios.filter((f) => f.status === 'PENDENTE').length ?? 0,
   );
 
+  /** Conferência finalizada (docs/features/confirmacao-dia.md, seção 28.1) trava novas alterações até reabrir. */
+  readonly estaFinalizada = computed(() => this.detalhe()?.finalizado ?? false);
+
   readonly podeFinalizar = computed(
-    () => this.estadoDetalhe() === 'carregado' && this.pendentesRestantes() === 0,
+    () =>
+      this.estadoDetalhe() === 'carregado' &&
+      this.pendentesRestantes() === 0 &&
+      !this.estaFinalizada(),
   );
+
+  readonly ehAdministrador = computed(() => this.auth.usuario()?.perfil === 'ADMINISTRADOR');
 
   /** Funcionários agrupados por tipo de trabalho, na ordem em que aparecem no resumo. */
   readonly funcionariosPorTipo = computed(() => {
@@ -115,15 +132,18 @@ export class ConfirmacaoDiaComponent implements OnInit {
     this.sedeSelecionadaId.set(sede.sedeId);
     this.erroFinalizar.set(null);
     this.mensagemFinalizar.set(null);
+    this.erroReabrir.set(null);
+    this.erroAlterarSituacao.set(null);
     this.carregarDetalhe();
   }
 
   voltarParaSedes(): void {
     this.sedeSelecionadaId.set(null);
     this.detalhe.set(null);
-    this.mostrarConfirmarTodos.set(false);
     this.erroFinalizar.set(null);
     this.mensagemFinalizar.set(null);
+    this.erroReabrir.set(null);
+    this.erroAlterarSituacao.set(null);
   }
 
   private carregarDetalhe(): void {
@@ -139,11 +159,35 @@ export class ConfirmacaoDiaComponent implements OnInit {
     });
   }
 
+  /**
+   * Igual a carregarDetalhe(), mas sem passar por 'carregando' — evita que a
+   * tela pisque pra "Carregando confirmação…" a cada troca de status
+   * individual (alterarSituacao), quando o usuário já está
+   * vendo a lista e só precisa que ela reflita o novo estado.
+   */
+  private recarregarDetalheSilencioso(): void {
+    const sedeId = this.sedeSelecionadaId();
+    if (!sedeId) return;
+    this.service.resumoDaSede(sedeId, this.data()).subscribe({
+      next: (detalhe) => this.detalhe.set(detalhe),
+      error: () => this.estadoDetalhe.set('erro'),
+    });
+  }
+
+  /** Valor do `<select>` — junta PRESENTE/SUBSTITUICAO_NECESSARIA nos rótulos de tela. */
+  valorSelecao(f: FuncionarioConfirmacao): string {
+    if (f.status === 'PRESENTE') return 'TRABALHOU';
+    if (f.status === 'SUBSTITUICAO_NECESSARIA') return 'FALTOU_URGENTE';
+    return f.status;
+  }
+
   /** Cor/rótulo consistentes com a seção 14/36 da doc. */
   corDoStatus(status: string): string {
     switch (status) {
       case 'PRESENTE':
         return 'verde';
+      case 'SUBSTITUIU':
+        return 'roxo';
       case 'CANCELOU':
         return 'amarelo';
       case 'FALTOU':
@@ -158,30 +202,50 @@ export class ConfirmacaoDiaComponent implements OnInit {
     switch (status) {
       case 'PRESENTE':
         return 'Trabalhou';
+      case 'SUBSTITUIU':
+        return 'Substituiu';
       case 'CANCELOU':
         return 'Cancelou';
       case 'FALTOU':
         return 'Faltou';
       case 'SUBSTITUICAO_NECESSARIA':
-        return 'Faltou (urgente)';
+        return 'Substituição urgente';
       default:
         return 'Pendente';
     }
   }
 
   alterarSituacao(funcionario: FuncionarioConfirmacao, novaSituacao: string): void {
-    if (!novaSituacao) return;
+    // Reativar uma alocação cancelada é permitido (ex.: "na verdade eu vou
+    // trabalhar sim") — o backend reativa e revalida a capacidade da vaga.
+    // Só recancelar quem já está CANCELOU não faz sentido, mas isso nem
+    // dispara aqui: o próprio <select> já parte de CANCELOU selecionado,
+    // então escolher a mesma opção de novo não gera evento de change.
+    if (!novaSituacao || this.estaFinalizada()) return;
     this.definirSalvando(funcionario.alocacaoId, true);
+    this.erroAlterarSituacao.set(null);
+    // "Faltou — substituição urgente" é só uma opção extra de tela pra
+    // FALTOU — urgência não existe pra CANCELOU/TRABALHOU (ver CLAUDE.md).
+    const urgente = novaSituacao === 'FALTOU_URGENTE';
+    const status: NovaSituacao = urgente ? 'FALTOU' : (novaSituacao as NovaSituacao);
     this.service
-      .atualizarSituacao(funcionario.alocacaoId, novaSituacao as NovaSituacao)
+      .atualizarSituacao(funcionario.alocacaoId, status, undefined, urgente)
       .subscribe({
         next: () => {
           this.definirSalvando(funcionario.alocacaoId, false);
-          this.carregarDetalhe();
+          this.recarregarDetalheSilencioso();
         },
-        error: () => {
+        error: (erro) => {
           this.definirSalvando(funcionario.alocacaoId, false);
-          this.estadoDetalhe.set('erro');
+          // Nunca troca pra estadoDetalhe 'erro' aqui — isso faria a lista
+          // inteira sumir da tela por causa de UMA alteração que falhou
+          // (ex.: conferência finalizada entre o carregamento e o clique).
+          // Mostra o erro junto da lista e recarrega, pra refletir o
+          // estado real (ex.: se finalizou nesse meio tempo, trava a tela).
+          this.erroAlterarSituacao.set(
+            erro?.error?.message ?? 'Não foi possível atualizar a situação do funcionário.',
+          );
+          this.recarregarDetalheSilencioso();
         },
       });
   }
@@ -192,32 +256,6 @@ export class ConfirmacaoDiaComponent implements OnInit {
     this.salvando.set(novo);
   }
 
-  abrirConfirmarTodos(): void {
-    this.mostrarConfirmarTodos.set(true);
-  }
-
-  cancelarConfirmarTodos(): void {
-    this.mostrarConfirmarTodos.set(false);
-  }
-
-  confirmarTodos(): void {
-    const sedeId = this.sedeSelecionadaId();
-    if (!sedeId) return;
-    this.confirmandoTodos.set(true);
-    this.service.confirmarTodos(sedeId, this.data()).subscribe({
-      next: () => {
-        this.confirmandoTodos.set(false);
-        this.mostrarConfirmarTodos.set(false);
-        this.carregarDetalhe();
-      },
-      error: () => {
-        this.confirmandoTodos.set(false);
-        this.mostrarConfirmarTodos.set(false);
-        this.estadoDetalhe.set('erro');
-      },
-    });
-  }
-
   finalizarConferencia(): void {
     const sedeId = this.sedeSelecionadaId();
     if (!sedeId || !this.podeFinalizar()) return;
@@ -225,14 +263,36 @@ export class ConfirmacaoDiaComponent implements OnInit {
     this.erroFinalizar.set(null);
     this.mensagemFinalizar.set(null);
     this.service.finalizar(sedeId, this.data()).subscribe({
-      next: () => {
+      next: (detalhe) => {
         this.finalizando.set(false);
+        this.detalhe.set(detalhe);
         this.mensagemFinalizar.set('Conferência do dia finalizada.');
       },
       error: (erro) => {
         this.finalizando.set(false);
         this.erroFinalizar.set(
           erro?.error?.message ?? 'Não foi possível finalizar a conferência.',
+        );
+      },
+    });
+  }
+
+  /** Só Administrador vê o botão (backend também rejeita pra qualquer outro perfil). */
+  reabrirConferencia(): void {
+    const sedeId = this.sedeSelecionadaId();
+    if (!sedeId || !this.estaFinalizada()) return;
+    this.reabrindo.set(true);
+    this.erroReabrir.set(null);
+    this.mensagemFinalizar.set(null);
+    this.service.reabrir(sedeId, this.data()).subscribe({
+      next: (detalhe) => {
+        this.reabrindo.set(false);
+        this.detalhe.set(detalhe);
+      },
+      error: (erro) => {
+        this.reabrindo.set(false);
+        this.erroReabrir.set(
+          erro?.error?.message ?? 'Não foi possível reabrir a conferência.',
         );
       },
     });

@@ -104,7 +104,7 @@ Manpower
 Necessários: 10
 Alocados: 10
 Trabalharam: 9
-Pendentes: 0
+Pendentes: 1
 Substituições: 1
 
 Forklift
@@ -155,7 +155,7 @@ MANPOWER
 Necessários: 10
 Alocados: 10
 Trabalharam: 9
-Pendentes: 0
+Pendentes: 1
 
 FORKLIFT
 
@@ -165,6 +165,13 @@ Trabalharam: 1
 Pendentes: 0
 
 Se houver várias vagas/tipos, todas devem aparecer.
+
+`Pendentes` aqui é "vagas ainda não preenchidas" — `max(0, Necessários -
+Trabalharam)`, nunca negativo (decisão revertida: não é mais "quantos ainda
+estão aguardando confirmação"; esse conceito continua existindo, mas vira
+o banner ⚠ da seção 17/27, calculado sobre todos os tipos juntos, não por
+tipo). `Trabalharam` soma quem confirmou como TRABALHOU e quem confirmou
+como SUBSTITUIU (seção 13.1) — os dois contam como trabalho de verdade.
 
 ## 9. Lista de funcionários
 A lista deve apresentar todos os funcionários que possuem uma alocação para aquela sede/data dentro do escopo do usuário.
@@ -188,6 +195,7 @@ Estados:
 - TRABALHOU
 - CANCELOU
 - FALTOU
+- SUBSTITUIU (seção 13.1 — decisão revertida: FALTOU pode ser marcado como urgente, seção 13; quando alguém cobre essa vaga, marca-se SUBSTITUIU nele, não TRABALHOU)
 
 Estado inicial:
 PENDENTE
@@ -235,36 +243,47 @@ Não gerar pagamento
 Identificar necessidade de substituição
 Atualizar os indicadores da vaga
 
+## 13.1. Funcionário que substituiu (SUBSTITUIU)
+Quando um funcionário cobre uma vaga que estava com FALTOU marcado como urgente (SUBSTITUICAO_NECESSARIA):
+Pedro Tanaka
+
+Status:
+SUBSTITUIU
+
+O sistema deve:
+- Tratar como trabalho normal — mesma elegibilidade de pagamento que TRABALHOU (seção 11)
+- Contar em "Trabalharam" no resumo por tipo (seção 8), igual TRABALHOU
+- Abater 1 da contagem de "substituições necessárias" daquele tipo, na mesma sede/dia — nunca deixar a contagem passar de zero
+- Manter o registro original de quem faltou intacto (nunca sobrescrever — seção 30/35)
+- Mostrar rótulo/cor próprios na tela, diferentes de um "Trabalhou" comum, pra deixar claro que essa pessoa cobriu uma urgência
+
+Exemplo:
+MANPOWER
+Necessários: 10
+Trabalharam: 9
+⚠ 1 substituição necessária
+
+Depois de marcar o substituto como SUBSTITUIU:
+MANPOWER
+Necessários: 10
+Trabalharam: 10
+(nenhuma substituição necessária pendente)
+
+O funcionário que faltou originalmente continua no histórico como FALTOU/SUBSTITUICAO_NECESSARIA — SUBSTITUIU é um registro novo, numa alocação diferente (a do substituto), não uma edição do registro original.
+
 ## 14. Cores dos estados
 A interface deve utilizar diferenciação visual clara.
 Sugestão:
 - PENDENTE    → azul
 - TRABALHOU   → verde
+- SUBSTITUIU  → roxo
 - CANCELOU    → amarelo
 - FALTOU      → vermelho
 
 As cores devem ser utilizadas de maneira consistente em todo o módulo.
 
-## 15. Confirmação rápida
-A tela deve possuir uma ação para confirmar todos os funcionários como presentes.
-Exemplo:
-[ TODOS TRABALHARAM ]
-
-Ao clicar, apresentar confirmação:
-CONFIRMAR PRESENÇA
-
-Você está confirmando que todos os funcionários
-alocados nesta sede trabalharam no dia 20/08/2026.
-
-Total de funcionários: 11
-
-[Cancelar] [Confirmar]
-
-Após confirmar:
-Todos os funcionários com situação PENDENTE devem passar para:
-TRABALHOU
-
-Funcionários que já possuam outro estado não devem ser sobrescritos sem confirmação explícita.
+## 15. Confirmação rápida (removida)
+A ação "Todos trabalharam" existiu nas primeiras versões da tela, mas foi removida — decisão revertida — por não fazer mais sentido no fluxo real de uso. A confirmação passou a ser sempre individual (seção 16).
 
 ## 16. Confirmação individual
 O usuário também deve conseguir alterar a situação individualmente.
@@ -537,7 +556,9 @@ O responsável pode finalizar a conferência da sede/dia.
 Botão:
 [FINALIZAR CONFERÊNCIA]
 
-A finalização serve para confirmar que a análise daquele dia foi concluída, não impede alterações anteriores.
+A finalização serve para confirmar que a análise daquele dia foi concluída **e trava** a sede/dia contra novas alterações de situação (alterar individualmente, "todos trabalharam") — decisão revertida em relação ao texto original desta seção, que dizia "não impede alterações anteriores". Persistida na tabela `conferencias_dia` (`sede_id` + `data`, únicos), preenchendo `finalizado_em`/`finalizado_por`.
+
+Somente o Administrador pode reabrir uma conferência já finalizada (`POST /confirmacoes/reabrir`), o que limpa `finalizado_em` e registra `reaberto_em`/`reaberto_por` — depois disso a sede/dia volta a aceitar alterações normalmente, até ser finalizada de novo.
 
 Antes de finalizar:
 Validar:
@@ -661,17 +682,15 @@ ou:
 {
   "status": "CANCELOU"
 }
-
-## 33. Confirmar todos
-Endpoint conceitual:
-POST /confirmacoes/todos
-Body:
+ou:
 {
-  "sedeId": "S001",
-  "data": "2026-08-20"
+  "status": "SUBSTITUIU"
 }
-O backend deve identificar os funcionários pendentes daquela sede/data e confirmar todos como:
-TRABALHOU
+
+`necessitaSubstituicaoUrgente: true` no body só é considerado quando `status` é `FALTOU` (seção 13) — marca a alocação como SUBSTITUICAO_NECESSARIA em vez de FALTOU. `SUBSTITUIU` (seção 13.1) não usa esse campo.
+
+## 33. Confirmar todos (removida)
+`POST /confirmacoes/todos` existiu, mas foi removido junto com a ação "Todos trabalharam" (seção 15) — não fazia mais sentido no fluxo real de uso. A situação de cada funcionário só é alterada individualmente (`PATCH /confirmacoes/:alocacaoId`, seção 32).
 
 ## 34. Finalizar confirmação
 Endpoint conceitual:
@@ -772,8 +791,6 @@ Carregar funcionários alocados
 Mostrar situação atual
       ↓
 Confirmar individualmente
-      │
-      └── ou confirmar todos
       ↓
 Backend valida
       ↓
@@ -809,8 +826,6 @@ Responsável consegue marcar funcionário como TRABALHOU.
 Responsável consegue marcar funcionário como CANCELOU.
 
 Responsável consegue marcar funcionário como FALTOU.
-
-Responsável consegue confirmar todos os funcionários de uma vez.
 
 Sistema identifica funcionários que precisam de substituição.
 

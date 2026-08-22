@@ -14,6 +14,7 @@ import { Alocacao } from '../alocacoes/alocacao.entity';
 import { UsuarioAutenticado } from '../auth/auth.service';
 import { ItemAlocacaoDto } from '../alocacoes/dto/criar-alocacao.dto';
 import { FuncionariosService } from '../funcionarios/funcionarios.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { Vaga } from '../vagas/vaga.entity';
 import { VagasService } from '../vagas/vagas.service';
 
@@ -40,6 +41,7 @@ export class AlocarService {
     private readonly alocacoesService: AlocacoesService,
     private readonly vagasService: VagasService,
     private readonly funcionariosService: FuncionariosService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async criarEmLote(
@@ -58,6 +60,7 @@ export class AlocarService {
 
     const vagasMap = await this.carregarVagas(itens);
     this.validarVagasNaoCanceladas(vagasMap);
+    await this.validarSedesNaoConferidas(vagasMap);
     this.validarCapacidadePorVaga(itens, await this.calcularDisponibilidade(vagasMap));
 
     const funcionariosUsados = new Set<string>();
@@ -161,6 +164,39 @@ export class AlocarService {
           `Esta vaga foi cancelada e não aceita novas alocações.`,
         );
       }
+    }
+  }
+
+  /**
+   * Sede/dia já finalizado na Confirmação do Dia
+   * (docs/features/confirmacao-dia.md, seção 28.1) não aceita nova
+   * alocação — a conferência já foi dada como concluída, então criar
+   * gente nova ali por trás deixaria o resumo já fechado desatualizado. Um
+   * Administrador pode reabrir a conferência (POST /confirmacoes/reabrir)
+   * pra liberar de novo.
+   */
+  private async validarSedesNaoConferidas(vagasMap: Map<string, Vaga>): Promise<void> {
+    const pares = [
+      ...new Set([...vagasMap.values()].map((v) => `${v.sedeId}|${v.data}`)),
+    ].map((chave) => {
+      const [sedeId, data] = chave.split('|');
+      return { sedeId, data: new Date(data) };
+    });
+    if (pares.length === 0) return;
+
+    const conferidas = await this.prisma.conferenciaDia.findMany({
+      where: {
+        finalizadoEm: { not: null },
+        OR: pares.map(({ sedeId, data }) => ({ sedeId, data })),
+      },
+      select: { sedeId: true, data: true },
+    });
+    if (conferidas.length > 0) {
+      const [primeira] = conferidas;
+      const dataIso = primeira.data.toISOString().slice(0, 10);
+      throw new BadRequestException(
+        `A conferência do dia ${dataIso} já foi finalizada para esta sede — não é possível criar novas alocações. Peça a um Administrador para reabrir a conferência antes.`,
+      );
     }
   }
 

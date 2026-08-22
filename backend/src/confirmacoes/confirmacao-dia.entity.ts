@@ -34,8 +34,22 @@ export interface ResumoTipoConfirmacao {
   necessarios: number;
   alocados: number;
   trabalharam: number;
+  /**
+   * Vagas desse tipo ainda não preenchidas: `max(0, necessarios -
+   * trabalharam)` — decisão revertida, não é mais "quantos ainda estão com
+   * confirmação em aberto" (esse conceito de "aguardando confirmação"
+   * continua existindo, só que calculado à parte no frontend a partir da
+   * lista de `funcionarios`, pra decidir se dá pra finalizar a conferência
+   * — ver ConfirmacoesService.finalizar).
+   */
   pendentes: number;
-  /** necessarios - trabalharam, nunca negativo — calculado, não gravado (seção 20/22). */
+  /**
+   * Quantos funcionários desse tipo estão marcados como urgentes
+   * (confirmação SUBSTITUICAO_NECESSARIA — só existe pra quem faltou, ver
+   * FaltasService.registrar), abatendo quem já cobriu essa vaga
+   * (SUBSTITUIU). É um subconjunto de `pendentes` — só a parte marcada
+   * como urgente, não qualquer vaga ainda em aberto.
+   */
   substituicoesNecessarias: number;
 }
 
@@ -47,4 +61,11 @@ export interface ResumoConfirmacaoSede {
   statusDia: StatusDia;
   resumoPorTipo: ResumoTipoConfirmacao[];
   funcionarios: FuncionarioConfirmacao[];
+  /**
+   * true quando a conferência dessa sede/dia já foi finalizada e ainda não
+   * foi reaberta (docs/features/confirmacao-dia.md, seção 28.1) — a tela
+   * deve bloquear alteração individual de situação enquanto for true.
+   */
+  finalizado: boolean;
+  finalizadoEm: string | null;
 }
