@@ -20,16 +20,23 @@ interface RequestComSessao {
 export class ConfirmacoesController {
   constructor(private readonly service: ConfirmacoesService) {}
 
-  /** Sem `sedeId`: lista de sedes com atividade no dia. Com `sedeId`: resumo detalhado. */
+  /**
+   * Sem `sedeId`: lista de sedes com atividade no dia. Com `sedeId`: resumo
+   * detalhado. `escopo` ("minha"/"todas") só se aplica à listagem — é
+   * ignorado (RESPONSAVEL sempre vê só a própria sede nesta tela) ou opt-in
+   * pra Administrador (padrão "todas", mas ele pode filtrar pra "minha"
+   * quando também é responsável por alguma sede).
+   */
   @Get()
   listar(
     @Query('data') data: string,
     @Query('sedeId') sedeId: string | undefined,
+    @Query('escopo') escopo: 'minha' | 'todas' | undefined,
     @Req() req: RequestComSessao,
   ) {
     return sedeId
       ? this.service.resumoDaSede(sedeId, data, req.user)
-      : this.service.listarSedesComAlocacoes(data, req.user);
+      : this.service.listarSedesComAlocacoes(data, req.user, escopo);
   }
 
   @Patch(':alocacaoId')

@@ -7,6 +7,8 @@ export type StatusConfirmacao =
   | 'SUBSTITUICAO_NECESSARIA'
   | 'SUBSTITUIU';
 export type StatusDia = 'PENDENTE' | 'EM_CONFERENCIA' | 'CONFERIDO';
+/** "minha" = só a(s) sede(s) do usuário; "todas" = sem filtro (só conveniência de visualização). */
+export type EscopoSedes = 'minha' | 'todas';
 
 /** Espelha backend/src/confirmacoes/confirmacao-dia.entity.ts. */
 export interface SedeComConfirmacoes {

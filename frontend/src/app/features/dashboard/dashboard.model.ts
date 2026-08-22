@@ -29,6 +29,8 @@ export interface SedeComVagas {
   urgente: boolean;
   /** true quando a sede tem vaga no dia e todas as vagas dela estão completas. */
   completa: boolean;
+  /** true = conferência do dia já finalizada — sem novas alocações (link "Alocar" vira "Visualizar"). */
+  finalizado: boolean;
   vagas: VagaResumo[];
 }
 

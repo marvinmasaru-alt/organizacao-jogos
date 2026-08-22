@@ -118,6 +118,11 @@ export class DashboardService {
           completa:
             vagas.length > 0 &&
             vagas.every((v) => v.status === StatusVaga.COMPLETA),
+          // Conferência do dia já finalizada (docs/features/confirmacao-dia.md,
+          // seção 28.1) — o frontend troca o link "Alocar" por "Visualizar"
+          // quando true, já que criar alocação nova é bloqueado nesse caso
+          // (ver AlocarService.validarSedesNaoConferidas).
+          finalizado: sedeIdsFinalizadas.has(sede.id),
           vagas,
         };
       })
