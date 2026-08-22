@@ -11,6 +11,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { AlocacoesModule } from './alocacoes/alocacoes.module';
 import { AlocarModule } from './alocar/alocar.module';
 import { FaltasModule } from './faltas/faltas.module';
+import { ConfirmacoesModule } from './confirmacoes/confirmacoes.module';
 import { PagamentosModule } from './pagamentos/pagamentos.module';
 import { HistoricoModule } from './historico/historico.module';
 
@@ -28,6 +29,7 @@ import { HistoricoModule } from './historico/historico.module';
     AlocacoesModule,
     AlocarModule,
     FaltasModule,
+    ConfirmacoesModule,
     PagamentosModule,
     HistoricoModule,
   ],

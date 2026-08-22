@@ -17,7 +17,8 @@ export type SituacaoParaAlocacao =
   | 'ALOCADO_OUTRA_VAGA'
   | 'JA_ALOCADO_NESTA_VAGA'
   | 'CANCELOU_NESTA_VAGA'
-  | 'FALTOU_NESTA_VAGA';
+  | 'FALTOU_NESTA_VAGA'
+  | 'CONFERENCIA_FINALIZADA';
 
 export interface FuncionarioParaAlocacao {
   id: string;

@@ -34,8 +34,10 @@ export class AlocacoesService {
 
   /**
    * Só contam para "preenchidas" as alocações ATIVAS cuja confirmação não
-   * seja FALTOU — quem faltou libera a posição, mesmo sem cancelar a
-   * alocação em si (a falta cancela o pagamento, não a vaga preenchida).
+   * seja FALTOU nem SUBSTITUICAO_NECESSARIA — as duas são a mesma situação
+   * (a pessoa não compareceu), só que a segunda é a variante marcada como
+   * urgente; ambas liberam a posição, mesmo sem cancelar a alocação em si
+   * (a falta cancela o pagamento, não a vaga preenchida).
    */
   async listarValidasPorVagaTipo(vagaTipoId: string): Promise<Alocacao[]> {
     const vagaTipo = await this.prisma.vagaTipo.findUnique({
@@ -49,7 +51,11 @@ export class AlocacoesService {
         vagaId: vagaTipo.vagaId,
         tipoTrabalho: vagaTipo.tipoTrabalho,
         status: StatusAlocacao.ATIVA,
-        NOT: { confirmacao: { status: StatusConfirmacao.FALTOU } },
+        NOT: {
+          confirmacao: {
+            status: { in: [StatusConfirmacao.FALTOU, StatusConfirmacao.SUBSTITUICAO_NECESSARIA] },
+          },
+        },
       },
       include: INCLUDE,
     });
@@ -66,7 +72,11 @@ export class AlocacoesService {
         vagaId: vagaRealId,
         tipoTrabalho,
         status: StatusAlocacao.ATIVA,
-        NOT: { confirmacao: { status: StatusConfirmacao.FALTOU } },
+        NOT: {
+          confirmacao: {
+            status: { in: [StatusConfirmacao.FALTOU, StatusConfirmacao.SUBSTITUICAO_NECESSARIA] },
+          },
+        },
       },
     });
   }
@@ -87,17 +97,61 @@ export class AlocacoesService {
     return linhas.map((a) => this.mapear(a));
   }
 
-  /** Alocações do dia com confirmação SUBSTITUICAO_NECESSARIA — consumido pelo Dashboard. */
+  /**
+   * Alocações do dia com confirmação SUBSTITUICAO_NECESSARIA ainda em
+   * aberto — consumido pelo Dashboard. `status: ATIVA` porque essa
+   * urgência só existe pra quem faltou (a alocação continua ATIVA — o
+   * funcionário estava alocado, só não compareceu); cancelamento nunca
+   * gera esse alerta.
+   *
+   * "Em aberto" abate, por vaga_tipo, uma urgência pra cada SUBSTITUIU já
+   * registrado no mesmo vaga_tipo — quem cobriu a vaga resolve o alerta
+   * (nunca deixa a contagem passar de zero), sem precisar sobrescrever o
+   * registro original da falta (ver princípio geral de histórico).
+   */
   async listarFaltasUrgentesPorData(data: string): Promise<Alocacao[]> {
-    const linhas = await this.prisma.alocacao.findMany({
-      where: {
-        status: StatusAlocacao.ATIVA,
-        vaga: { data: new Date(data) },
-        confirmacao: { status: StatusConfirmacao.SUBSTITUICAO_NECESSARIA },
-      },
-      include: INCLUDE,
+    const dataRef = new Date(data);
+    const [urgentesRaw, resolvidasRaw] = await Promise.all([
+      this.prisma.alocacao.findMany({
+        where: {
+          status: StatusAlocacao.ATIVA,
+          vaga: { data: dataRef },
+          confirmacao: { status: StatusConfirmacao.SUBSTITUICAO_NECESSARIA },
+        },
+        include: INCLUDE,
+      }),
+      this.prisma.alocacao.findMany({
+        where: {
+          status: StatusAlocacao.ATIVA,
+          vaga: { data: dataRef },
+          confirmacao: { status: StatusConfirmacao.SUBSTITUIU },
+        },
+        include: INCLUDE,
+      }),
+    ]);
+
+    const urgentes = urgentesRaw.map((a) => this.mapear(a));
+    const resolvidas = resolvidasRaw.map((a) => this.mapear(a));
+
+    const resolvidasPorVagaTipo = new Map<string, number>();
+    for (const r of resolvidas) {
+      resolvidasPorVagaTipo.set(
+        r.vagaTipoId,
+        (resolvidasPorVagaTipo.get(r.vagaTipoId) ?? 0) + 1,
+      );
+    }
+
+    const abatidasPorVagaTipo = new Map<string, number>();
+    const linhas = urgentes.filter((u) => {
+      const jaAbatidas = abatidasPorVagaTipo.get(u.vagaTipoId) ?? 0;
+      const disponivelParaAbater = resolvidasPorVagaTipo.get(u.vagaTipoId) ?? 0;
+      if (jaAbatidas < disponivelParaAbater) {
+        abatidasPorVagaTipo.set(u.vagaTipoId, jaAbatidas + 1);
+        return false; // urgência já coberta por um substituto
+      }
+      return true;
     });
-    return linhas.map((a) => this.mapear(a));
+    return linhas;
   }
 
   /**
@@ -135,6 +189,10 @@ export class AlocacoesService {
    * Nunca apaga a linha: `alocacoes.status -> CANCELADA` +
    * `confirmacoes.status -> CANCELOU` (com motivo/quem confirmou/quando),
    * dentro de uma transação. Libera a vaga mas mantém o histórico.
+   *
+   * Cancelamento nunca é "urgente" — esse alerta (SUBSTITUICAO_NECESSARIA)
+   * é exclusivo de quem faltou (ver FaltasService.registrar); cancelar já
+   * libera a vaga normalmente, aparecendo como pendência comum no board.
    */
   async cancelar(
     id: string,

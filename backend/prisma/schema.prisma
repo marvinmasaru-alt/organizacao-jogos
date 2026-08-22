@@ -70,6 +70,12 @@ enum StatusConfirmacao {
   FALTOU
   CANCELOU
   SUBSTITUICAO_NECESSARIA
+  /// Trabalhou cobrindo uma vaga que estava com SUBSTITUICAO_NECESSARIA —
+  /// conta como trabalho normal (elegível a pagamento, igual PRESENTE),
+  /// mas fica marcado à parte pra abater da contagem de substituições
+  /// urgentes daquele tipo (ver ConfirmacoesService.resumoDaSede) e pra
+  /// aparecer com rótulo próprio na tela, distinto de um "Trabalhou" comum.
+  SUBSTITUIU
 
   @@map("status_confirmacao")
 }
@@ -94,6 +100,8 @@ model Usuario {
 
   responsavel        Responsavel?
   confirmacoesFeitas  Confirmacao[] @relation("ConfirmadoPor")
+  conferenciasFinalizadas ConferenciaDia[] @relation("FinalizadoPor")
+  conferenciasReabertas   ConferenciaDia[] @relation("ReabertoPor")
 
   @@map("usuarios")
 }
@@ -153,6 +161,7 @@ model Sede {
   responsavel  Responsavel?  @relation(fields: [responsavelId], references: [id])
   modelosVagas ModeloVaga[]
   vagas        Vaga[]
+  conferencias ConferenciaDia[]
 
   @@map("sedes")
 }
@@ -266,6 +275,30 @@ model Confirmacao {
   confirmadoPorUsuario Usuario? @relation("ConfirmadoPor", fields: [confirmadoPor], references: [id])
 
   @@map("confirmacoes")
+}
+
+/// Trava a conferência de uma sede/dia (docs/features/confirmacao-dia.md,
+/// seção 28.1) — quando `finalizadoEm` está preenchido, a tela de
+/// Confirmação do Dia bloqueia novas alterações de situação para aquela
+/// sede/dia. `reabertoEm`/`reabertoPor` registram a última reabertura (só
+/// Administrador), sem apagar o histórico de quem finalizou originalmente.
+model ConferenciaDia {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sedeId         String    @map("sede_id") @db.Uuid
+  data           DateTime  @db.Date
+  finalizadoEm   DateTime? @map("finalizado_em")
+  finalizadoPor  String?   @map("finalizado_por") @db.Uuid
+  reabertoEm     DateTime? @map("reaberto_em")
+  reabertoPor    String?   @map("reaberto_por") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  sede                Sede     @relation(fields: [sedeId], references: [id])
+  finalizadoPorUsuario Usuario? @relation("FinalizadoPor", fields: [finalizadoPor], references: [id])
+  reabertoPorUsuario   Usuario? @relation("ReabertoPor", fields: [reabertoPor], references: [id])
+
+  @@unique([sedeId, data])
+  @@map("conferencias_dia")
 }
 
 model TabelaValor {

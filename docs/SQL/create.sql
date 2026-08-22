@@ -53,7 +53,12 @@ CREATE TYPE status_confirmacao AS ENUM (
     'PRESENTE',
     'FALTOU',
     'CANCELOU',
-    'SUBSTITUICAO_NECESSARIA'
+    'SUBSTITUICAO_NECESSARIA',
+    -- Trabalhou cobrindo uma vaga marcada SUBSTITUICAO_NECESSARIA. Conta
+    -- como trabalho normal (elegível a pagamento, igual PRESENTE), mas
+    -- abate a contagem de substituições urgentes daquele tipo e tem rótulo
+    -- próprio na tela (docs/features/confirmacao-dia.md).
+    'SUBSTITUIU'
 );
 
 CREATE TYPE status_pagamento AS ENUM (
@@ -368,6 +373,48 @@ CREATE TABLE confirmacoes (
         REFERENCES alocacoes(id),
 
     FOREIGN KEY(confirmado_por)
+        REFERENCES usuarios(id)
+);
+
+
+
+-- =====================================
+-- CONFERENCIAS_DIA
+-- Trava de finalização da Confirmação do Dia (docs/features/confirmacao-dia.md,
+-- seção 28.1). Uma linha por sede+dia; finalizado_em preenchido bloqueia
+-- novas alterações de situação naquela sede/dia até um Administrador
+-- reabrir (reaberto_em/reaberto_por).
+-- =====================================
+
+CREATE TABLE conferencias_dia (
+
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    sede_id UUID NOT NULL,
+
+    data DATE NOT NULL,
+
+    finalizado_em TIMESTAMP,
+
+    finalizado_por UUID,
+
+    reaberto_em TIMESTAMP,
+
+    reaberto_por UUID,
+
+    created_at TIMESTAMP DEFAULT NOW(),
+
+    updated_at TIMESTAMP DEFAULT NOW(),
+
+    UNIQUE(sede_id, data),
+
+    FOREIGN KEY(sede_id)
+        REFERENCES sedes(id),
+
+    FOREIGN KEY(finalizado_por)
+        REFERENCES usuarios(id),
+
+    FOREIGN KEY(reaberto_por)
         REFERENCES usuarios(id)
 );
 

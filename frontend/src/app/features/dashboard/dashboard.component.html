@@ -1,5 +1,12 @@
 <header class="cabecalho">
   <h1>Dashboard</h1>
+  <a
+    class="link-configurar-vagas"
+    routerLink="/confirmacao-dia"
+    [queryParams]="{ data: data() }"
+  >
+    ✓ Confirmar dia
+  </a>
   @if (souAdministrador()) {
     <a class="link-configurar-vagas" routerLink="/configuracoes-vagas">⚙ Configurar vagas</a>
   }

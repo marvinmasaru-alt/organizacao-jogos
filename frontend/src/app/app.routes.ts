@@ -62,6 +62,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'confirmacao-dia',
+        loadComponent: () =>
+          import('./features/confirmacao-dia/confirmacao-dia.component').then(
+            (m) => m.ConfirmacaoDiaComponent,
+          ),
+      },
+      {
         path: 'pagamentos',
         loadComponent: () =>
           import('./features/pagamentos/pagamentos.component').then(
