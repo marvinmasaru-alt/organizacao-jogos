@@ -82,12 +82,12 @@ export class FaltasService {
     alocacaoId: string;
     alocacao: {
       funcionarioId: string;
-      tipoTrabalho: string;
-      vaga: { data: Date; tipos: { id: string; tipoTrabalho: string }[] };
+      tipoTrabalhoId: string;
+      vaga: { data: Date; tipos: { id: string; tipoTrabalhoId: string }[] };
     };
   }): Falta {
     const vagaTipo = c.alocacao.vaga.tipos.find(
-      (t) => t.tipoTrabalho === c.alocacao.tipoTrabalho,
+      (t) => t.tipoTrabalhoId === c.alocacao.tipoTrabalhoId,
     );
     return {
       id: c.id,

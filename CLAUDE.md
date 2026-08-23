@@ -107,12 +107,23 @@ USUARIOS (login: email + senha_hash)
                  │      └── MODELO_VAGA_DIAS   sem geração automática ainda,
                  │      └── MODELO_VAGA_TIPOS  ver "Pontos em aberto")
                  └── VAGAS (um dia+sede)
-                        └── VAGA_TIPOS (tipo+quantidade daquele dia)
-                               └── ALOCACOES (vaga_id + tipo_trabalho)
+                        └── VAGA_TIPOS (tipo_trabalho_id+quantidade daquele dia)
+                               └── ALOCACOES (vaga_id + tipo_trabalho_id)
                                       ├──→ CONFIRMACOES (1:1 — falta/cancelamento)
                                       └──→ PAGAMENTOS (1:1)
-TABELA_VALORES (tipo_trabalho + tipo_sede + vigência → valor)
+TIPOS_TRABALHO (id, nome, ativo — cadastro dinâmico, só Administrador)
+TABELA_VALORES (tipo_trabalho_id + tipo_sede + vigência → valor)
 ```
+
+- **Tipo de trabalho é dinâmico** (decisão revertida): não é mais o enum
+  fixo `MANPOWER`/`FORKLIFT` — é a tabela `tipos_trabalho` (id, nome,
+  ativo), cadastrável/editável só por Administrador
+  (`TiposTrabalhoModule`/tela "Tipos de Trabalho" no Dashboard).
+  `vaga_tipos`, `alocacoes`, `modelo_vaga_tipos` e `tabela_valores`
+  referenciam `tipo_trabalho_id` (FK), nunca mais um valor de enum.
+  `ativo = false` tira o tipo dos formulários novos sem apagar nada —
+  registros que já usam aquele tipo continuam mostrando o nome
+  normalmente (princípio geral de histórico, nunca exclusão de verdade).
 
 Duas particularidades importantes de como a API expõe esse schema (ver
 `backend/src/vagas/vaga.entity.ts` e `backend/src/alocacoes/alocacao.entity.ts`
@@ -141,9 +152,9 @@ para os comentários completos):
 - **Um funcionário só pode ser alocado pelo responsável que o cadastrou.**
   Mesmo que esteja disponível, outro responsável não pode selecioná-lo.
 - Funcionário não `APROVADO` nunca aparece como disponível para alocação.
-- Tipo de trabalho (`MANPOWER` / `FORKLIFT`) **não é fixo no funcionário** —
-  é definido por vaga/dia (`alocacoes.tipo_trabalho`). O mesmo funcionário
-  pode trabalhar como Manpower num dia e Forklift no outro.
+- Tipo de trabalho **não é fixo no funcionário** — é definido por vaga/dia
+  (`alocacoes.tipo_trabalho_id`). O mesmo funcionário pode trabalhar como
+  Manpower num dia e Forklift no outro.
 
 ### Sedes
 - Campos: id, sigla, nome, endereco, tipo_sede (`HUB`/`EXTERNA`), cluster,
@@ -291,7 +302,7 @@ senha (tabela `usuarios`, `senha_hash` com bcrypt).
 
 ## Módulos planejados
 
-Autenticação · Funcionários · Responsáveis · Sedes · Vagas · Board ·
-Alocações · Cancelamentos · Faltas · Substituições · Pagamentos ·
-Histórico · Permissões
+Autenticação · Funcionários · Responsáveis · Sedes · Vagas ·
+Tipos de Trabalho · Board · Alocações · Cancelamentos · Faltas ·
+Substituições · Pagamentos · Histórico · Permissões
 

@@ -97,7 +97,7 @@ export class ConfirmacaoDiaComponent implements OnInit {
     return detalhe.resumoPorTipo.map((resumo) => ({
       resumo,
       funcionarios: detalhe.funcionarios.filter(
-        (f) => f.tipoTrabalho === resumo.tipoTrabalho,
+        (f) => f.tipoTrabalhoId === resumo.tipoTrabalhoId,
       ),
     }));
   });

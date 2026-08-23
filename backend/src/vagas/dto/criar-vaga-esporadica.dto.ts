@@ -2,7 +2,6 @@ import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
-  IsEnum,
   IsISO8601,
   IsInt,
   IsNotEmpty,
@@ -11,11 +10,12 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
-import { TipoTrabalho } from '@prisma/client';
 
 export class VagaTipoDto {
-  @IsEnum(TipoTrabalho)
-  tipoTrabalho!: TipoTrabalho;
+  /** Id de `tipos_trabalho` (tipo dinâmico — ver TiposTrabalhoModule). Existência/`ativo` validados no serviço. */
+  @IsString()
+  @IsNotEmpty()
+  tipoTrabalhoId!: string;
 
   @IsInt()
   @IsPositive()

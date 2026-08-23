@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { TipoSede, TipoTrabalho } from '@prisma/client';
+import { TipoSede } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusPrazoPagamento } from '../common/types/enums';
 import { PRAZO_PAGAMENTO_DIAS } from './pagamentos.constants';
@@ -16,16 +16,16 @@ import { PRAZO_PAGAMENTO_DIAS } from './pagamentos.constants';
 export class PagamentosService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Valor vigente na data informada para (tipoTrabalho, tipoSede), ou `null` se nenhum estiver ativo/vigente. */
+  /** Valor vigente na data informada para (tipoTrabalhoId, tipoSede), ou `null` se nenhum estiver ativo/vigente. */
   async valorVigente(
-    tipoTrabalho: TipoTrabalho,
+    tipoTrabalhoId: string,
     tipoSede: TipoSede,
     data: string,
   ): Promise<number | null> {
     const dataRef = new Date(data);
     const valor = await this.prisma.tabelaValor.findFirst({
       where: {
-        tipoTrabalho,
+        tipoTrabalhoId,
         tipoSede,
         ativo: true,
         dataInicio: { lte: dataRef },

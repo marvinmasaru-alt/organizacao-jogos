@@ -8,7 +8,6 @@ import {
   StatusAlocacao,
   StatusConfirmacao,
   StatusVaga,
-  TipoTrabalho,
 } from '@prisma/client';
 import { AlocacoesService } from '../alocacoes/alocacoes.service';
 import { FaltasService } from '../faltas/faltas.service';
@@ -114,15 +113,16 @@ export class ConfirmacoesService {
     // Dashboard, ver VagasService.calcularDisponibilidade).
     const vagasDoDia = await this.prisma.vaga.findMany({
       where: { sedeId, data: dataRef, status: { not: StatusVaga.CANCELADA } },
-      include: { tipos: true },
+      include: { tipos: { include: { tipoTrabalho: true } } },
     });
-    const necessariosPorTipo = new Map<TipoTrabalho, number>();
+    const necessariosPorTipo = new Map<string, { nome: string; necessarios: number }>();
     for (const vaga of vagasDoDia) {
       for (const tipo of vaga.tipos) {
-        necessariosPorTipo.set(
-          tipo.tipoTrabalho,
-          (necessariosPorTipo.get(tipo.tipoTrabalho) ?? 0) + tipo.quantidade,
-        );
+        const atual = necessariosPorTipo.get(tipo.tipoTrabalhoId);
+        necessariosPorTipo.set(tipo.tipoTrabalhoId, {
+          nome: tipo.tipoTrabalho.nome,
+          necessarios: (atual?.necessarios ?? 0) + tipo.quantidade,
+        });
       }
     }
 
@@ -132,7 +132,7 @@ export class ConfirmacoesService {
     // do `disponíveis`/contagens, mas nunca da listagem desta tela.
     const alocacoes = await this.prisma.alocacao.findMany({
       where: { vaga: { sedeId, data: dataRef } },
-      include: { confirmacao: true, funcionario: true },
+      include: { confirmacao: true, funcionario: true, tipoTrabalho: true },
     });
 
     const funcionarios: FuncionarioConfirmacao[] = alocacoes.map((a) => ({
@@ -140,7 +140,8 @@ export class ConfirmacoesService {
       funcionarioId: a.funcionarioId,
       nome: a.funcionario.nome,
       telefone: a.funcionario.telefone,
-      tipoTrabalho: a.tipoTrabalho,
+      tipoTrabalhoId: a.tipoTrabalhoId,
+      tipoTrabalhoNome: a.tipoTrabalho.nome,
       status: a.confirmacao?.status ?? StatusConfirmacao.PENDENTE,
       observacao: a.confirmacao?.observacao ?? null,
       confirmadoEm: a.confirmacao?.confirmadoEm?.toISOString() ?? null,
@@ -154,45 +155,50 @@ export class ConfirmacoesService {
       alocacoesAtivas.some((a) => a.id === f.alocacaoId),
     );
 
-    const resumoPorTipo: ResumoTipoConfirmacao[] = [
-      ...new Set([...necessariosPorTipo.keys(), ...funcionarios.map((f) => f.tipoTrabalho)]),
-    ].map((tipoTrabalho) => {
-      const doTipo = funcionariosAtivos.filter((f) => f.tipoTrabalho === tipoTrabalho);
-      // SUBSTITUIU conta como trabalho normal — quem cobriu a vaga
-      // trabalhou de verdade, só tem um rótulo diferente na tela.
-      const trabalharam = doTipo.filter(
-        (f) =>
-          f.status === StatusConfirmacao.PRESENTE ||
-          f.status === StatusConfirmacao.SUBSTITUIU,
-      ).length;
-      const necessarios = necessariosPorTipo.get(tipoTrabalho) ?? 0;
-      // "Pendentes" aqui é vagas ainda não preenchidas (necessários -
-      // trabalharam, nunca negativo) — decisão revertida: não é mais
-      // "aguardando confirmação" (esse conceito continua existindo, só que
-      // calculado à parte no frontend a partir de `funcionarios`, pra
-      // decidir se dá pra finalizar — ver pendentesRestantes/finalizar()).
-      const pendentes = Math.max(0, necessarios - trabalharam);
-      // Conta quem foi marcado como urgente (FALTOU + urgente — ver
-      // FaltasService.registrar), abatendo uma urgência pra cada
-      // SUBSTITUIU já registrado no mesmo tipo — nunca deixa passar de
-      // zero. Pendente/cancelado/faltou sem urgência não acende esse
-      // alerta, mesmo que a vaga siga incompleta.
-      const urgentes = doTipo.filter(
-        (f) => f.status === StatusConfirmacao.SUBSTITUICAO_NECESSARIA,
-      ).length;
-      const resolvidas = doTipo.filter(
-        (f) => f.status === StatusConfirmacao.SUBSTITUIU,
-      ).length;
-      const substituicoesNecessarias = Math.max(0, urgentes - resolvidas);
-      return {
-        tipoTrabalho,
-        necessarios,
-        alocados: doTipo.length,
-        trabalharam,
-        pendentes,
-        substituicoesNecessarias,
-      };
-    });
+    const nomePorTipoId = new Map<string, string>();
+    for (const [id, { nome }] of necessariosPorTipo) nomePorTipoId.set(id, nome);
+    for (const f of funcionarios) nomePorTipoId.set(f.tipoTrabalhoId, f.tipoTrabalhoNome);
+
+    const resumoPorTipo: ResumoTipoConfirmacao[] = [...nomePorTipoId.keys()].map(
+      (tipoTrabalhoId) => {
+        const doTipo = funcionariosAtivos.filter((f) => f.tipoTrabalhoId === tipoTrabalhoId);
+        // SUBSTITUIU conta como trabalho normal — quem cobriu a vaga
+        // trabalhou de verdade, só tem um rótulo diferente na tela.
+        const trabalharam = doTipo.filter(
+          (f) =>
+            f.status === StatusConfirmacao.PRESENTE ||
+            f.status === StatusConfirmacao.SUBSTITUIU,
+        ).length;
+        const necessarios = necessariosPorTipo.get(tipoTrabalhoId)?.necessarios ?? 0;
+        // "Pendentes" aqui é vagas ainda não preenchidas (necessários -
+        // trabalharam, nunca negativo) — decisão revertida: não é mais
+        // "aguardando confirmação" (esse conceito continua existindo, só que
+        // calculado à parte no frontend a partir de `funcionarios`, pra
+        // decidir se dá pra finalizar — ver pendentesRestantes/finalizar()).
+        const pendentes = Math.max(0, necessarios - trabalharam);
+        // Conta quem foi marcado como urgente (FALTOU + urgente — ver
+        // FaltasService.registrar), abatendo uma urgência pra cada
+        // SUBSTITUIU já registrado no mesmo tipo — nunca deixa passar de
+        // zero. Pendente/cancelado/faltou sem urgência não acende esse
+        // alerta, mesmo que a vaga siga incompleta.
+        const urgentes = doTipo.filter(
+          (f) => f.status === StatusConfirmacao.SUBSTITUICAO_NECESSARIA,
+        ).length;
+        const resolvidas = doTipo.filter(
+          (f) => f.status === StatusConfirmacao.SUBSTITUIU,
+        ).length;
+        const substituicoesNecessarias = Math.max(0, urgentes - resolvidas);
+        return {
+          tipoTrabalhoId,
+          tipoTrabalhoNome: nomePorTipoId.get(tipoTrabalhoId) ?? '',
+          necessarios,
+          alocados: doTipo.length,
+          trabalharam,
+          pendentes,
+          substituicoesNecessarias,
+        };
+      },
+    );
 
     const conferencia = await this.prisma.conferenciaDia.findUnique({
       where: { sedeId_data: { sedeId, data: dataRef } },
@@ -265,7 +271,7 @@ export class ConfirmacoesService {
       if (status === 'CANCELOU') {
         throw new BadRequestException('Esta alocação já está cancelada.');
       }
-      await this.reativarAlocacao(alocacao.id, alocacao.vagaId, alocacao.tipoTrabalho);
+      await this.reativarAlocacao(alocacao.id, alocacao.vagaId, alocacao.tipoTrabalhoId);
     }
 
     if (status === 'CANCELOU') {
@@ -312,11 +318,11 @@ export class ConfirmacoesService {
   private async reativarAlocacao(
     alocacaoId: string,
     vagaId: string,
-    tipoTrabalho: TipoTrabalho,
+    tipoTrabalhoId: string,
   ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       const vagaTipo = await tx.vagaTipo.findFirst({
-        where: { vagaId, tipoTrabalho },
+        where: { vagaId, tipoTrabalhoId },
       });
       if (!vagaTipo) {
         throw new NotFoundException('Tipo de vaga não encontrado para esta alocação.');
@@ -329,7 +335,7 @@ export class ConfirmacoesService {
       const preenchidas = await tx.alocacao.count({
         where: {
           vagaId,
-          tipoTrabalho,
+          tipoTrabalhoId,
           status: StatusAlocacao.ATIVA,
           NOT: {
             confirmacao: {

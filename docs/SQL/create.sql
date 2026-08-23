@@ -38,11 +38,6 @@ CREATE TYPE status_vaga AS ENUM (
     'CANCELADA'
 );
 
-CREATE TYPE tipo_trabalho AS ENUM (
-    'MANPOWER',
-    'FORKLIFT'
-);
-
 CREATE TYPE status_alocacao AS ENUM (
     'ATIVA',
     'CANCELADA'
@@ -189,6 +184,28 @@ CREATE TABLE sedes (
 
 
 -- =====================================
+-- TIPOS DE TRABALHO
+-- Dinâmico (decisão revertida: não é mais enum fixo MANPOWER/FORKLIFT) —
+-- cadastrado/editado só por Administrador. ativo=false tira o tipo dos
+-- formulários novos sem apagar nada (princípio geral de histórico).
+-- =====================================
+
+CREATE TABLE tipos_trabalho (
+
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    nome VARCHAR(50) UNIQUE NOT NULL,
+
+    ativo BOOLEAN DEFAULT TRUE,
+
+    created_at TIMESTAMP DEFAULT NOW(),
+
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+
+
+-- =====================================
 -- MODELOS DE VAGAS
 -- =====================================
 
@@ -246,14 +263,17 @@ CREATE TABLE modelo_vaga_tipos (
 
     modelo_vaga_id UUID NOT NULL,
 
-    tipo_trabalho tipo_trabalho NOT NULL,
+    tipo_trabalho_id UUID NOT NULL,
 
     quantidade INTEGER NOT NULL
         CHECK (quantidade > 0),
 
     FOREIGN KEY(modelo_vaga_id)
         REFERENCES modelos_vagas(id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+
+    FOREIGN KEY(tipo_trabalho_id)
+        REFERENCES tipos_trabalho(id)
 );
 
 
@@ -299,14 +319,17 @@ CREATE TABLE vaga_tipos (
 
     vaga_id UUID NOT NULL,
 
-    tipo_trabalho tipo_trabalho NOT NULL,
+    tipo_trabalho_id UUID NOT NULL,
 
     quantidade INTEGER NOT NULL
         CHECK (quantidade > 0),
 
     FOREIGN KEY(vaga_id)
         REFERENCES vagas(id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+
+    FOREIGN KEY(tipo_trabalho_id)
+        REFERENCES tipos_trabalho(id)
 );
 
 
@@ -325,7 +348,7 @@ CREATE TABLE alocacoes (
 
     responsavel_id UUID NOT NULL,
 
-    tipo_trabalho tipo_trabalho NOT NULL,
+    tipo_trabalho_id UUID NOT NULL,
 
     status status_alocacao DEFAULT 'ATIVA',
 
@@ -344,7 +367,10 @@ CREATE TABLE alocacoes (
         REFERENCES funcionarios(id),
 
     FOREIGN KEY(responsavel_id)
-        REFERENCES responsaveis(id)
+        REFERENCES responsaveis(id),
+
+    FOREIGN KEY(tipo_trabalho_id)
+        REFERENCES tipos_trabalho(id)
 );
 
 
@@ -428,7 +454,7 @@ CREATE TABLE tabela_valores (
 
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
-    tipo_trabalho tipo_trabalho NOT NULL,
+    tipo_trabalho_id UUID NOT NULL,
 
     tipo_sede tipo_sede NOT NULL,
 
@@ -442,7 +468,10 @@ CREATE TABLE tabela_valores (
 
     created_at TIMESTAMP DEFAULT NOW(),
 
-    updated_at TIMESTAMP DEFAULT NOW()
+    updated_at TIMESTAMP DEFAULT NOW(),
+
+    FOREIGN KEY(tipo_trabalho_id)
+        REFERENCES tipos_trabalho(id)
 );
 
 

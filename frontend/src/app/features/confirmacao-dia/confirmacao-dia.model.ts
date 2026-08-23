@@ -1,4 +1,3 @@
-export type TipoTrabalho = 'MANPOWER' | 'FORKLIFT';
 export type StatusConfirmacao =
   | 'PENDENTE'
   | 'PRESENTE'
@@ -24,14 +23,16 @@ export interface FuncionarioConfirmacao {
   funcionarioId: string;
   nome: string;
   telefone: string | null;
-  tipoTrabalho: TipoTrabalho;
+  tipoTrabalhoId: string;
+  tipoTrabalhoNome: string;
   status: StatusConfirmacao;
   observacao: string | null;
   confirmadoEm: string | null;
 }
 
 export interface ResumoTipoConfirmacao {
-  tipoTrabalho: TipoTrabalho;
+  tipoTrabalhoId: string;
+  tipoTrabalhoNome: string;
   necessarios: number;
   alocados: number;
   trabalharam: number;

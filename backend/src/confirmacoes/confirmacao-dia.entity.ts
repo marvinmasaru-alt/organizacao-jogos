@@ -1,4 +1,4 @@
-import { StatusConfirmacao, TipoTrabalho } from '@prisma/client';
+import { StatusConfirmacao } from '@prisma/client';
 
 /**
  * Status agregado da conferência de uma sede/dia — calculado a partir das
@@ -30,7 +30,8 @@ export interface FuncionarioConfirmacao {
   funcionarioId: string;
   nome: string;
   telefone: string | null;
-  tipoTrabalho: TipoTrabalho;
+  tipoTrabalhoId: string;
+  tipoTrabalhoNome: string;
   status: StatusConfirmacao;
   observacao: string | null;
   confirmadoEm: string | null;
@@ -38,7 +39,8 @@ export interface FuncionarioConfirmacao {
 
 /** Resumo por tipo de trabalho dentro de uma vaga (seção 8 da doc). */
 export interface ResumoTipoConfirmacao {
-  tipoTrabalho: TipoTrabalho;
+  tipoTrabalhoId: string;
+  tipoTrabalhoNome: string;
   necessarios: number;
   alocados: number;
   trabalharam: number;

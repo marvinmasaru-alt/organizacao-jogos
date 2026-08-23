@@ -1,8 +1,7 @@
-import { TipoTrabalho } from '@prisma/client';
-
 /** Um tipo de trabalho e a quantidade padrão dele dentro de uma configuração. */
 export interface ConfiguracaoVagaTipo {
-  tipoTrabalho: TipoTrabalho;
+  tipoTrabalhoId: string;
+  tipoTrabalhoNome: string;
   quantidade: number;
 }
 

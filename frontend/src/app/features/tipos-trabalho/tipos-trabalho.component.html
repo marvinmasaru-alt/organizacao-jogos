@@ -1,0 +1,101 @@
+<header class="cabecalho">
+  <a class="link-voltar-dashboard" routerLink="/dashboard">← Dashboard</a>
+  <h1>Tipos de Trabalho</h1>
+</header>
+
+<section class="secao" aria-label="Lista de tipos de trabalho">
+  <p class="ajuda">
+    Tipos disponíveis pra usar em vagas e alocações (ex.: Manpower, Forklift).
+    Desativar tira o tipo dos formulários novos, mas nunca apaga o histórico
+    de quem já usou.
+  </p>
+
+  @switch (estado()) {
+    @case ('carregando') {
+      <p class="estado">Carregando…</p>
+    }
+    @case ('erro') {
+      <p class="estado estado--erro">Não foi possível carregar os tipos de trabalho.</p>
+    }
+    @case ('carregado') {
+      @if (tipos().length === 0) {
+        <p class="estado">Nenhum tipo de trabalho cadastrado ainda.</p>
+      } @else {
+        <ul class="lista-tipos">
+          @for (tipo of tipos(); track tipo.id) {
+            <li class="tipo-item" [class.tipo-item--inativo]="!tipo.ativo">
+              @if (editandoId() === tipo.id) {
+                <input
+                  type="text"
+                  class="tipo-item__input"
+                  [value]="nomeEdicao()"
+                  (input)="nomeEdicao.set($any($event.target).value)"
+                  maxlength="50"
+                />
+                <div class="tipo-item__acoes">
+                  <button
+                    type="button"
+                    class="botao-salvar"
+                    [disabled]="salvandoEdicao() || !nomeEdicao().trim()"
+                    (click)="salvarEdicao(tipo.id)"
+                  >
+                    {{ salvandoEdicao() ? 'Salvando…' : 'Salvar' }}
+                  </button>
+                  <button type="button" (click)="cancelarEdicao()">Cancelar</button>
+                </div>
+                @if (erroEdicao()) {
+                  <p class="estado estado--erro">{{ erroEdicao() }}</p>
+                }
+              } @else {
+                <span class="tipo-item__nome">
+                  {{ tipo.nome }}
+                  @if (!tipo.ativo) {
+                    <span class="tipo-item__badge">Inativo</span>
+                  }
+                </span>
+                <div class="tipo-item__acoes">
+                  <button type="button" (click)="iniciarEdicao(tipo)">Editar</button>
+                  <button
+                    type="button"
+                    [class.botao-desativar]="tipo.ativo"
+                    [class.botao-ativar]="!tipo.ativo"
+                    [disabled]="alternandoAtivo().has(tipo.id)"
+                    (click)="alternarAtivo(tipo)"
+                  >
+                    {{ tipo.ativo ? 'Desativar' : 'Reativar' }}
+                  </button>
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      }
+    }
+  }
+</section>
+
+<section class="secao" aria-label="Novo tipo de trabalho">
+  <h2>Novo tipo de trabalho</h2>
+  <form class="form" (submit)="$event.preventDefault(); criar()">
+    <label>
+      Nome
+      <input
+        type="text"
+        placeholder="Ex.: Packer"
+        maxlength="50"
+        [value]="novoNome()"
+        (input)="novoNome.set($any($event.target).value)"
+      />
+    </label>
+    @if (erroCriar()) {
+      <p class="estado estado--erro">{{ erroCriar() }}</p>
+    }
+    <button
+      type="submit"
+      class="botao-confirmar"
+      [disabled]="criando() || !novoNome().trim()"
+    >
+      {{ criando() ? 'Criando…' : 'Criar tipo de trabalho' }}
+    </button>
+  </form>
+</section>

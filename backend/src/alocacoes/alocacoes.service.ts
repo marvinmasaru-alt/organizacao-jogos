@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, StatusAlocacao, StatusConfirmacao, TipoTrabalho } from '@prisma/client';
+import { Prisma, StatusAlocacao, StatusConfirmacao } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { Alocacao } from './alocacao.entity';
 
 const INCLUDE = {
-  vaga: { include: { sede: true, tipos: true } },
+  vaga: { include: { sede: true, tipos: { include: { tipoTrabalho: true } } } },
+  tipoTrabalho: true,
 } satisfies Prisma.AlocacaoInclude;
 
 type AlocacaoComRelacoes = Prisma.AlocacaoGetPayload<{ include: typeof INCLUDE }>;
@@ -13,12 +14,12 @@ type AlocacaoComRelacoes = Prisma.AlocacaoGetPayload<{ include: typeof INCLUDE }
  * Dados mínimos pra criar uma alocação nova — sem valores/comissão (fora
  * de escopo desta migração, ver plano) e sem `id`/`status` (gerados aqui:
  * sempre ATIVA, com uma `confirmacao` PENDENTE criada junto).
- * `vagaId`/`tipoTrabalho` são os campos REAIS da tabela `alocacoes` — quem
- * resolve o `vagaTipoId` da API pra esse par é o AlocarService.
+ * `vagaId`/`tipoTrabalhoId` são os campos REAIS da tabela `alocacoes` —
+ * quem resolve o `vagaTipoId` da API pra esse par é o AlocarService.
  */
 export interface NovaAlocacaoInput {
   vagaId: string;
-  tipoTrabalho: TipoTrabalho;
+  tipoTrabalhoId: string;
   funcionarioId: string;
   responsavelFornecimentoId: string;
 }
@@ -49,7 +50,7 @@ export class AlocacoesService {
     const linhas = await this.prisma.alocacao.findMany({
       where: {
         vagaId: vagaTipo.vagaId,
-        tipoTrabalho: vagaTipo.tipoTrabalho,
+        tipoTrabalhoId: vagaTipo.tipoTrabalhoId,
         status: StatusAlocacao.ATIVA,
         NOT: {
           confirmacao: {
@@ -65,12 +66,12 @@ export class AlocacoesService {
   /** Mesma regra de "ocupa a vaga" que listarValidasPorVagaTipo, mas só a contagem — usado por VagasService. */
   async contarValidasPorVagaRealETipo(
     vagaRealId: string,
-    tipoTrabalho: TipoTrabalho,
+    tipoTrabalhoId: string,
   ): Promise<number> {
     return this.prisma.alocacao.count({
       where: {
         vagaId: vagaRealId,
-        tipoTrabalho,
+        tipoTrabalhoId,
         status: StatusAlocacao.ATIVA,
         NOT: {
           confirmacao: {
@@ -174,7 +175,7 @@ export class AlocacoesService {
             vagaId: item.vagaId,
             funcionarioId: item.funcionarioId,
             responsavelId: item.responsavelFornecimentoId,
-            tipoTrabalho: item.tipoTrabalho,
+            tipoTrabalhoId: item.tipoTrabalhoId,
             status: StatusAlocacao.ATIVA,
             confirmacao: { create: { status: StatusConfirmacao.PENDENTE } },
           },
@@ -221,7 +222,7 @@ export class AlocacoesService {
   }
 
   private mapear(a: AlocacaoComRelacoes): Alocacao {
-    const vagaTipo = a.vaga.tipos.find((t) => t.tipoTrabalho === a.tipoTrabalho);
+    const vagaTipo = a.vaga.tipos.find((t) => t.tipoTrabalhoId === a.tipoTrabalhoId);
     return {
       id: a.id,
       vagaId: a.vagaId,
@@ -229,7 +230,8 @@ export class AlocacoesService {
       funcionarioId: a.funcionarioId,
       responsavelFornecimentoId: a.responsavelId,
       responsavelSedeId: a.vaga.sede.responsavelId ?? '',
-      tipoTrabalho: a.tipoTrabalho,
+      tipoTrabalhoId: a.tipoTrabalhoId,
+      tipoTrabalhoNome: a.tipoTrabalho.nome,
       data: a.vaga.data.toISOString().slice(0, 10),
       status: a.status,
     };

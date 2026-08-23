@@ -50,13 +50,6 @@ enum StatusVaga {
   @@map("status_vaga")
 }
 
-enum TipoTrabalho {
-  MANPOWER
-  FORKLIFT
-
-  @@map("tipo_trabalho")
-}
-
 enum StatusAlocacao {
   ATIVA
   CANCELADA
@@ -86,6 +79,27 @@ enum StatusPagamento {
   CANCELADO
 
   @@map("status_pagamento")
+}
+
+/// Tipo de trabalho dinâmico (decisão revertida: não é mais um enum fixo
+/// MANPOWER/FORKLIFT) — cadastrado/editado só por Administrador
+/// (TiposTrabalhoModule). `ativo=false` tira o tipo dos formulários novos
+/// sem apagar nada (princípio geral de histórico) — vaga_tipos/alocacoes/
+/// tabela_valores/modelo_vaga_tipos que já usam esse tipo continuam
+/// mostrando o nome normalmente.
+model TipoTrabalho {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome       String    @unique @db.VarChar(50)
+  ativo      Boolean   @default(true)
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  modeloVagaTipos ModeloVagaTipo[]
+  vagaTipos       VagaTipo[]
+  alocacoes       Alocacao[]
+  tabelaValores   TabelaValor[]
+
+  @@map("tipos_trabalho")
 }
 
 model Usuario {
@@ -198,12 +212,13 @@ model ModeloVagaDia {
 }
 
 model ModeloVagaTipo {
-  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  modeloVagaId  String       @map("modelo_vaga_id") @db.Uuid
-  tipoTrabalho  TipoTrabalho @map("tipo_trabalho")
-  quantidade    Int
+  id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  modeloVagaId    String  @map("modelo_vaga_id") @db.Uuid
+  tipoTrabalhoId  String  @map("tipo_trabalho_id") @db.Uuid
+  quantidade      Int
 
-  modeloVaga ModeloVaga @relation(fields: [modeloVagaId], references: [id], onDelete: Cascade)
+  modeloVaga    ModeloVaga    @relation(fields: [modeloVagaId], references: [id], onDelete: Cascade)
+  tipoTrabalho  TipoTrabalho  @relation(fields: [tipoTrabalhoId], references: [id])
 
   @@map("modelo_vaga_tipos")
 }
@@ -229,31 +244,33 @@ model Vaga {
 }
 
 model VagaTipo {
-  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  vagaId        String       @map("vaga_id") @db.Uuid
-  tipoTrabalho  TipoTrabalho @map("tipo_trabalho")
-  quantidade    Int
+  id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vagaId          String  @map("vaga_id") @db.Uuid
+  tipoTrabalhoId  String  @map("tipo_trabalho_id") @db.Uuid
+  quantidade      Int
 
-  vaga Vaga @relation(fields: [vagaId], references: [id], onDelete: Cascade)
+  vaga          Vaga          @relation(fields: [vagaId], references: [id], onDelete: Cascade)
+  tipoTrabalho  TipoTrabalho  @relation(fields: [tipoTrabalhoId], references: [id])
 
   @@map("vaga_tipos")
 }
 
 model Alocacao {
-  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  vagaId         String          @map("vaga_id") @db.Uuid
-  funcionarioId  String          @map("funcionario_id") @db.Uuid
-  responsavelId  String          @map("responsavel_id") @db.Uuid
-  tipoTrabalho   TipoTrabalho    @map("tipo_trabalho")
-  status         StatusAlocacao  @default(ATIVA)
-  dataAlocacao   DateTime        @default(now()) @map("data_alocacao")
-  observacao     String?
-  createdAt      DateTime        @default(now()) @map("created_at")
-  updatedAt      DateTime        @default(now()) @updatedAt @map("updated_at")
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vagaId          String          @map("vaga_id") @db.Uuid
+  funcionarioId   String          @map("funcionario_id") @db.Uuid
+  responsavelId   String          @map("responsavel_id") @db.Uuid
+  tipoTrabalhoId  String          @map("tipo_trabalho_id") @db.Uuid
+  status          StatusAlocacao  @default(ATIVA)
+  dataAlocacao    DateTime        @default(now()) @map("data_alocacao")
+  observacao      String?
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @default(now()) @updatedAt @map("updated_at")
 
   vaga         Vaga         @relation(fields: [vagaId], references: [id])
   funcionario  Funcionario  @relation(fields: [funcionarioId], references: [id])
   responsavel  Responsavel  @relation(fields: [responsavelId], references: [id])
+  tipoTrabalho TipoTrabalho @relation(fields: [tipoTrabalhoId], references: [id])
   confirmacao  Confirmacao?
   pagamento    Pagamento?
 
@@ -302,15 +319,17 @@ model ConferenciaDia {
 }
 
 model TabelaValor {
-  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tipoTrabalho   TipoTrabalho  @map("tipo_trabalho")
-  tipoSede       TipoSede      @map("tipo_sede")
-  valor          Decimal       @db.Decimal(10, 2)
-  dataInicio     DateTime?     @map("data_inicio") @db.Date
-  dataFim        DateTime?     @map("data_fim") @db.Date
-  ativo          Boolean       @default(true)
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @default(now()) @updatedAt @map("updated_at")
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tipoTrabalhoId  String        @map("tipo_trabalho_id") @db.Uuid
+  tipoSede        TipoSede      @map("tipo_sede")
+  valor           Decimal       @db.Decimal(10, 2)
+  dataInicio      DateTime?     @map("data_inicio") @db.Date
+  dataFim         DateTime?     @map("data_fim") @db.Date
+  ativo           Boolean       @default(true)
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @default(now()) @updatedAt @map("updated_at")
+
+  tipoTrabalho  TipoTrabalho  @relation(fields: [tipoTrabalhoId], references: [id])
 
   @@map("tabela_valores")
 }

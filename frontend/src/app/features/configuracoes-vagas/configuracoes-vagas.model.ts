@@ -1,4 +1,9 @@
-export type TipoTrabalho = 'MANPOWER' | 'FORKLIFT';
+/** Espelha backend/src/tipos-trabalho/tipo-trabalho.entity.ts — dinâmico, cadastrado pelo Administrador. */
+export interface TipoTrabalho {
+  id: string;
+  nome: string;
+  ativo: boolean;
+}
 
 export interface Sede {
   id: string;
@@ -10,7 +15,14 @@ export interface Sede {
 }
 
 export interface ConfiguracaoVagaTipo {
-  tipoTrabalho: TipoTrabalho;
+  tipoTrabalhoId: string;
+  tipoTrabalhoNome: string;
+  quantidade: number;
+}
+
+/** Corpo enviado ao criar — só o id, o nome vem do backend na resposta. */
+export interface NovoConfiguracaoVagaTipo {
+  tipoTrabalhoId: string;
   quantidade: number;
 }
 
@@ -30,7 +42,7 @@ export interface ConfiguracaoVaga {
 export interface CriarConfiguracaoVaga {
   sedeId: string;
   nome: string;
-  tipos: ConfiguracaoVagaTipo[];
+  tipos: NovoConfiguracaoVagaTipo[];
   diasSemana: number[];
   dataInicio?: string;
   dataFim?: string;
@@ -40,7 +52,7 @@ export interface CriarConfiguracaoVaga {
 export interface CriarVagaEsporadica {
   sedeId: string;
   data: string;
-  tipos: ConfiguracaoVagaTipo[];
+  tipos: NovoConfiguracaoVagaTipo[];
   observacao?: string;
 }
 
@@ -49,7 +61,8 @@ export interface Vaga {
   id: string;
   data: string;
   sedeId: string;
-  tipo: TipoTrabalho;
+  tipoId: string;
+  tipo: string;
   quantidade: number;
   status: 'ABERTA' | 'INCOMPLETA' | 'COMPLETA' | 'CANCELADA';
   origem: 'FIXA' | 'ESPORADICA';

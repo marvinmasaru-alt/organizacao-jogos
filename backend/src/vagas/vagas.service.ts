@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CriarVagaEsporadicaDto } from './dto/criar-vaga-esporadica.dto';
 import { Vaga, VagaComDisponibilidade } from './vaga.entity';
 
-const INCLUDE = { vaga: true } satisfies Prisma.VagaTipoInclude;
+const INCLUDE = { vaga: true, tipoTrabalho: true } satisfies Prisma.VagaTipoInclude;
 type VagaTipoComVaga = Prisma.VagaTipoGetPayload<{ include: typeof INCLUDE }>;
 
 /** ISO: 1 (segunda) a 7 (domingo) — `Date.getUTCDay()` usa 0 (domingo) a 6 (sábado). */
@@ -59,7 +59,7 @@ export class VagasService {
         const alocacoesValidas =
           await this.alocacoesService.contarValidasPorVagaRealETipo(
             v.vagaRealId,
-            v.tipo,
+            v.tipoId,
           );
         const disponiveis = Math.max(0, v.quantidade - alocacoesValidas);
         const status =
@@ -88,6 +88,7 @@ export class VagasService {
     if (!sede.ativo) {
       throw new BadRequestException('Sede não está ativa.');
     }
+    await this.validarTiposAtivos(dto.tipos.map((t) => t.tipoTrabalhoId));
 
     const vaga = await this.prisma.vaga.create({
       data: {
@@ -99,13 +100,13 @@ export class VagasService {
         tipos: {
           createMany: {
             data: dto.tipos.map((t) => ({
-              tipoTrabalho: t.tipoTrabalho,
+              tipoTrabalhoId: t.tipoTrabalhoId,
               quantidade: t.quantidade,
             })),
           },
         },
       },
-      include: { tipos: true },
+      include: { tipos: { include: { tipoTrabalho: true } } },
     });
 
     return vaga.tipos.map((t) => this.mapear({ ...t, vaga }));
@@ -127,6 +128,24 @@ export class VagasService {
       where: { id: vagaTipo.vagaId },
       data: { status: StatusVaga.CANCELADA },
     });
+  }
+
+  /** Toda vaga esporádica nova só pode usar tipos de trabalho existentes e ativos (TiposTrabalhoModule). */
+  private async validarTiposAtivos(tipoTrabalhoIds: string[]): Promise<void> {
+    const ids = [...new Set(tipoTrabalhoIds)];
+    const tipos = await this.prisma.tipoTrabalho.findMany({
+      where: { id: { in: ids } },
+    });
+    const encontrados = new Map(tipos.map((t) => [t.id, t]));
+    for (const id of ids) {
+      const tipo = encontrados.get(id);
+      if (!tipo) {
+        throw new NotFoundException(`Tipo de trabalho ${id} não encontrado.`);
+      }
+      if (!tipo.ativo) {
+        throw new BadRequestException(`Tipo de trabalho "${tipo.nome}" está inativo.`);
+      }
+    }
   }
 
   /**
@@ -170,7 +189,7 @@ export class VagasService {
           tipos: {
             createMany: {
               data: modelo.tipos.map((t) => ({
-                tipoTrabalho: t.tipoTrabalho,
+                tipoTrabalhoId: t.tipoTrabalhoId,
                 quantidade: t.quantidade,
               })),
             },
@@ -186,7 +205,8 @@ export class VagasService {
       vagaRealId: t.vagaId,
       data: t.vaga.data.toISOString().slice(0, 10),
       sedeId: t.vaga.sedeId,
-      tipo: t.tipoTrabalho,
+      tipoId: t.tipoTrabalhoId,
+      tipo: t.tipoTrabalho.nome,
       quantidade: t.quantidade,
       status: t.vaga.status,
       origem: t.vaga.modeloVagaId ? 'FIXA' : 'ESPORADICA',

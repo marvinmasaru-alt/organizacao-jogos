@@ -1,0 +1,168 @@
+:host {
+  display: block;
+  padding: 1rem;
+}
+
+.cabecalho {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.link-voltar-dashboard {
+  align-self: flex-start;
+  color: #333;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.secao {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.ajuda {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 0.25rem 0 1rem;
+}
+
+.estado {
+  padding: 0.75rem 0;
+  color: #666;
+}
+
+.estado--erro {
+  color: #b00020;
+}
+
+.lista-tipos {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tipo-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 0.5rem 0.85rem;
+}
+
+.tipo-item--inativo {
+  opacity: 0.6;
+}
+
+.tipo-item__nome {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.tipo-item__badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #b00020;
+  border: 1px solid #b00020;
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+}
+
+.tipo-item__input {
+  flex: 1;
+  min-width: 150px;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font: inherit;
+}
+
+.tipo-item__acoes {
+  display: flex;
+  gap: 0.5rem;
+
+  button {
+    background: none;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 0.3rem 0.6rem;
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.botao-desativar {
+  border-color: #b00020 !important;
+  color: #b00020;
+}
+
+.botao-ativar {
+  border-color: #1a7f37 !important;
+  color: #1a7f37;
+}
+
+.botao-salvar {
+  border-color: #1a7f37 !important;
+  color: #1a7f37;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 360px;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.9rem;
+  }
+
+  input {
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font: inherit;
+  }
+}
+
+.botao-confirmar {
+  align-self: flex-start;
+  padding: 0.6rem 1.1rem;
+  border: none;
+  border-radius: 8px;
+  background: #1a7f37;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+}
+
+@media (min-width: 768px) {
+  :host {
+    padding: 1.5rem 2rem;
+  }
+}

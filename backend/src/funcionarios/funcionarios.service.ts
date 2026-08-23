@@ -128,7 +128,7 @@ export class FuncionariosService {
             include: { vaga: { include: { tipos: true } } },
           });
           const canceladaEhDestaVaga = canceladaNestaVaga?.vaga.tipos.some(
-            (t) => t.id === vagaId && t.tipoTrabalho === canceladaNestaVaga.tipoTrabalho,
+            (t) => t.id === vagaId && t.tipoTrabalhoId === canceladaNestaVaga.tipoTrabalhoId,
           );
           if (canceladaNestaVaga && canceladaEhDestaVaga) {
             situacao = SituacaoParaAlocacao.CANCELOU_NESTA_VAGA;

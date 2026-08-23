@@ -1,7 +1,7 @@
-import { StatusAlocacao, TipoTrabalho } from '@prisma/client';
+import { StatusAlocacao } from '@prisma/client';
 
 /**
- * Espelha a tabela `alocacoes` (docs/SQL/create.sql), com dois campos
+ * Espelha a tabela `alocacoes` (docs/SQL/create.sql), com três campos
  * calculados na leitura (nunca gravados na própria linha):
  *  - `data`: dia do trabalho, vem de `vagas.data` (join) — a tabela não
  *    tem coluna própria de data, só `data_alocacao` (timestamp de quando o
@@ -10,6 +10,9 @@ import { StatusAlocacao, TipoTrabalho } from '@prisma/client';
  *    (join). `responsavelId` (coluna real da tabela) é sempre o
  *    responsável pelo FORNECIMENTO (quem alocou) — decisão confirmada, já
  *    que o schema só tem uma FK de responsável na tabela.
+ *  - `tipoTrabalhoNome`: vem de `tipo_trabalho_id -> tipos_trabalho.nome`
+ *    (join) — tipo de trabalho é dinâmico (tabela `tipos_trabalho`, ver
+ *    TiposTrabalhoModule), não mais um enum fixo MANPOWER/FORKLIFT.
  *
  * Falta/cancelamento não vivem mais aqui — ver `Confirmacao`
  * (tabela `confirmacoes`, 1:1 com esta), que guarda status
@@ -22,7 +25,8 @@ export interface Alocacao {
   funcionarioId: string;
   responsavelFornecimentoId: string;
   responsavelSedeId: string;
-  tipoTrabalho: TipoTrabalho;
+  tipoTrabalhoId: string;
+  tipoTrabalhoNome: string;
   data: string; // ISO date, de vagas.data
   status: StatusAlocacao;
 }

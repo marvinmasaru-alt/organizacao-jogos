@@ -7,6 +7,7 @@ import {
   CriarConfiguracaoVaga,
   CriarVagaEsporadica,
   Sede,
+  TipoTrabalho,
   Vaga,
 } from './configuracoes-vagas.model';
 
@@ -17,6 +18,11 @@ export class ConfiguracoesVagasService {
 
   listarSedes(): Observable<Sede[]> {
     return this.http.get<Sede[]>(`${API_BASE_URL}/sedes`);
+  }
+
+  /** Só os ativos — o que os formulários de cadastro devem oferecer (ver TiposTrabalhoModule). */
+  listarTiposTrabalho(): Observable<TipoTrabalho[]> {
+    return this.http.get<TipoTrabalho[]>(`${API_BASE_URL}/tipos-trabalho`);
   }
 
   listarConfiguracoes(sedeId?: string): Observable<ConfiguracaoVaga[]> {

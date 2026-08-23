@@ -1,4 +1,4 @@
-import { StatusVaga, TipoTrabalho } from '@prisma/client';
+import { StatusVaga } from '@prisma/client';
 
 /**
  * No banco, `vagas` (um dia+sede) e `vaga_tipos` (tipo+quantidade daquele
@@ -20,7 +20,8 @@ export interface Vaga {
   vagaRealId: string; // vagas.id
   data: string; // ISO date (vagas.data)
   sedeId: string;
-  tipo: TipoTrabalho;
+  tipoId: string; // tipos_trabalho.id — usado pra criar/filtrar alocações
+  tipo: string; // tipos_trabalho.nome — usado pra exibição (era o enum antes)
   quantidade: number;
   status: StatusVaga;
   origem: OrigemVaga;

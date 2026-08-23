@@ -52,8 +52,8 @@
               @if (configuracoesExpandidas().has(config.id)) {
                 <div class="config-item__detalhes">
                   <div class="config-item__tipos">
-                    @for (tipo of config.tipos; track tipo.tipoTrabalho) {
-                      <span>{{ tipo.tipoTrabalho }}: {{ tipo.quantidade }}</span>
+                    @for (tipo of config.tipos; track tipo.tipoTrabalhoId) {
+                      <span>{{ tipo.tipoTrabalhoNome }}: {{ tipo.quantidade }}</span>
                     }
                   </div>
                   <div class="config-item__dias">Opera: {{ labelDias(config.diasSemana) }}</div>
@@ -105,11 +105,13 @@
       @for (linha of novaConfigTipos(); track $index) {
         <div class="linha-tipo">
           <select
-            [value]="linha.tipoTrabalho"
-            (change)="atualizarLinhaConfig($index, 'tipoTrabalho', $any($event.target).value)"
+            [value]="linha.tipoTrabalhoId"
+            (change)="atualizarLinhaConfig($index, 'tipoTrabalhoId', $any($event.target).value)"
           >
-            <option value="MANPOWER">Manpower</option>
-            <option value="FORKLIFT">Forklift</option>
+            <option value="" disabled>Selecione…</option>
+            @for (tipo of tiposTrabalho(); track tipo.id) {
+              <option [value]="tipo.id">{{ tipo.nome }}</option>
+            }
           </select>
           <input
             type="number"
@@ -219,11 +221,13 @@
       @for (linha of esporadicaTipos(); track $index) {
         <div class="linha-tipo">
           <select
-            [value]="linha.tipoTrabalho"
-            (change)="atualizarLinhaEsporadica($index, 'tipoTrabalho', $any($event.target).value)"
+            [value]="linha.tipoTrabalhoId"
+            (change)="atualizarLinhaEsporadica($index, 'tipoTrabalhoId', $any($event.target).value)"
           >
-            <option value="MANPOWER">Manpower</option>
-            <option value="FORKLIFT">Forklift</option>
+            <option value="" disabled>Selecione…</option>
+            @for (tipo of tiposTrabalho(); track tipo.id) {
+              <option [value]="tipo.id">{{ tipo.nome }}</option>
+            }
           </select>
           <input
             type="number"

@@ -121,7 +121,7 @@ export class AlocarService {
 
       novasAlocacoes.push({
         vagaId: vaga.vagaRealId,
-        tipoTrabalho: vaga.tipo,
+        tipoTrabalhoId: vaga.tipoId,
         funcionarioId: funcionario.id,
         responsavelFornecimentoId: usuario.responsavelId,
       });

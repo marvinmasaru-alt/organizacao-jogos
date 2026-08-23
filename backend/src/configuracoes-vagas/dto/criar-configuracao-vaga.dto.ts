@@ -2,7 +2,6 @@ import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
-  IsEnum,
   IsIn,
   IsInt,
   IsISO8601,
@@ -12,11 +11,12 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
-import { TipoTrabalho } from '@prisma/client';
 
 export class ConfiguracaoVagaTipoDto {
-  @IsEnum(TipoTrabalho)
-  tipoTrabalho!: TipoTrabalho;
+  /** Id de `tipos_trabalho` (tipo dinâmico). Existência/`ativo` validados no serviço. */
+  @IsString()
+  @IsNotEmpty()
+  tipoTrabalhoId!: string;
 
   @IsInt()
   @IsPositive()

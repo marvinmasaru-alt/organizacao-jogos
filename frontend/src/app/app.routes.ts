@@ -91,6 +91,14 @@ export const routes: Routes = [
             './features/configuracoes-vagas/configuracoes-vagas.component'
           ).then((m) => m.ConfiguracoesVagasComponent),
       },
+      {
+        path: 'tipos-trabalho',
+        canActivate: [perfilGuard(['ADMINISTRADOR'])],
+        loadComponent: () =>
+          import('./features/tipos-trabalho/tipos-trabalho.component').then(
+            (m) => m.TiposTrabalhoComponent,
+          ),
+      },
     ],
   },
   { path: '**', redirectTo: 'dashboard' },

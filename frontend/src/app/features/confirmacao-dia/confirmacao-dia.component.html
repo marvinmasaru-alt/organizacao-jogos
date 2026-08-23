@@ -105,9 +105,9 @@
           }
 
           <div class="resumo-tipos">
-            @for (resumo of d.resumoPorTipo; track resumo.tipoTrabalho) {
+            @for (resumo of d.resumoPorTipo; track resumo.tipoTrabalhoId) {
               <div class="resumo-card">
-                <strong>{{ resumo.tipoTrabalho }}</strong>
+                <strong>{{ resumo.tipoTrabalhoNome }}</strong>
                 <span>Necessários: {{ resumo.necessarios }}</span>
                 <span>Alocados: {{ resumo.alocados }}</span>
                 <span>Trabalharam: {{ resumo.trabalharam }}</span>
@@ -121,8 +121,8 @@
             }
           </div>
 
-          @for (grupo of funcionariosPorTipo(); track grupo.resumo.tipoTrabalho) {
-            <h3>{{ grupo.resumo.tipoTrabalho }}</h3>
+          @for (grupo of funcionariosPorTipo(); track grupo.resumo.tipoTrabalhoId) {
+            <h3>{{ grupo.resumo.tipoTrabalhoNome }}</h3>
             <ul class="lista-funcionarios">
               @for (f of grupo.funcionarios; track f.alocacaoId) {
                 <li class="funcionario-item">

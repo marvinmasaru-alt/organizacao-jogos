@@ -5,8 +5,8 @@ import { paraDataIso } from '../../core/utils/data.util';
 import { ConfiguracoesVagasService } from './configuracoes-vagas.service';
 import {
   ConfiguracaoVaga,
-  ConfiguracaoVagaTipo,
   DIAS_SEMANA,
+  NovoConfiguracaoVagaTipo,
   Sede,
   TipoTrabalho,
   Vaga,
@@ -16,12 +16,12 @@ type Estado = 'carregando' | 'erro' | 'carregado';
 
 /** Linha editável de tipo+quantidade nos dois formulários (config. fixa e vaga esporádica). */
 interface LinhaTipo {
-  tipoTrabalho: TipoTrabalho;
+  tipoTrabalhoId: string;
   quantidade: number;
 }
 
 function novaLinhaTipo(): LinhaTipo {
-  return { tipoTrabalho: 'MANPOWER', quantidade: 1 };
+  return { tipoTrabalhoId: '', quantidade: 1 };
 }
 
 /**
@@ -45,6 +45,10 @@ export class ConfiguracoesVagasComponent implements OnInit {
   // --- Sedes (usadas nos dois formulários) ---
   readonly sedes = signal<Sede[]>([]);
   readonly estadoSedes = signal<Estado>('carregando');
+
+  // --- Tipos de trabalho (usados nos dois formulários — só os ativos). ---
+  readonly tiposTrabalho = signal<TipoTrabalho[]>([]);
+  readonly estadoTiposTrabalho = signal<Estado>('carregando');
 
   // --- Configurações fixas ---
   readonly configuracoes = signal<ConfiguracaoVaga[]>([]);
@@ -79,6 +83,7 @@ export class ConfiguracoesVagasComponent implements OnInit {
 
   ngOnInit(): void {
     this.carregarSedes();
+    this.carregarTiposTrabalho();
     this.carregarConfiguracoes();
     this.carregarVagasDoDia();
   }
@@ -92,6 +97,21 @@ export class ConfiguracoesVagasComponent implements OnInit {
       },
       error: () => this.estadoSedes.set('erro'),
     });
+  }
+
+  private carregarTiposTrabalho(): void {
+    this.estadoTiposTrabalho.set('carregando');
+    this.service.listarTiposTrabalho().subscribe({
+      next: (tipos) => {
+        this.tiposTrabalho.set(tipos);
+        this.estadoTiposTrabalho.set('carregado');
+      },
+      error: () => this.estadoTiposTrabalho.set('erro'),
+    });
+  }
+
+  nomeTipo(tipoTrabalhoId: string): string {
+    return this.tiposTrabalho().find((t) => t.id === tipoTrabalhoId)?.nome ?? '';
   }
 
   carregarConfiguracoes(): void {
@@ -153,7 +173,7 @@ export class ConfiguracoesVagasComponent implements OnInit {
       !!this.novaConfigSedeId() &&
       !!this.novaConfigNome().trim() &&
       this.novaConfigTipos().length > 0 &&
-      this.novaConfigTipos().every((l) => l.quantidade > 0) &&
+      this.novaConfigTipos().every((l) => l.quantidade > 0 && !!l.tipoTrabalhoId) &&
       this.novaConfigDias().size > 0
     );
   }
@@ -169,7 +189,7 @@ export class ConfiguracoesVagasComponent implements OnInit {
       .criarConfiguracao({
         sedeId: this.novaConfigSedeId(),
         nome: this.novaConfigNome().trim(),
-        tipos: this.novaConfigTipos() as ConfiguracaoVagaTipo[],
+        tipos: this.novaConfigTipos() as NovoConfiguracaoVagaTipo[],
         diasSemana: [...this.novaConfigDias()],
         dataInicio: this.novaConfigDataInicio() || undefined,
         dataFim: this.novaConfigDataFim() || undefined,
@@ -241,7 +261,7 @@ export class ConfiguracoesVagasComponent implements OnInit {
       !!this.esporadicaSedeId() &&
       !!this.esporadicaData() &&
       this.esporadicaTipos().length > 0 &&
-      this.esporadicaTipos().every((l) => l.quantidade > 0)
+      this.esporadicaTipos().every((l) => l.quantidade > 0 && !!l.tipoTrabalhoId)
     );
   }
 
@@ -257,7 +277,7 @@ export class ConfiguracoesVagasComponent implements OnInit {
       .criarVagaEsporadica({
         sedeId: this.esporadicaSedeId(),
         data: this.esporadicaData(),
-        tipos: this.esporadicaTipos() as ConfiguracaoVagaTipo[],
+        tipos: this.esporadicaTipos() as NovoConfiguracaoVagaTipo[],
         observacao: this.esporadicaObservacao().trim() || undefined,
       })
       .subscribe({
