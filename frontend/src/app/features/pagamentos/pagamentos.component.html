@@ -1,0 +1,285 @@
+<header class="cabecalho">
+  <a class="link-voltar-dashboard" routerLink="/dashboard">← Dashboard</a>
+  <h1>💰 Pagamentos</h1>
+
+  <nav class="abas" aria-label="Abas de pagamentos">
+    <button
+      type="button"
+      class="aba"
+      [class.aba--ativa]="abaAtiva() === 'receber'"
+      (click)="selecionarAba('receber')"
+    >
+      Pagamentos a Receber
+    </button>
+    <button
+      type="button"
+      class="aba"
+      [class.aba--ativa]="abaAtiva() === 'funcionarios'"
+      (click)="selecionarAba('funcionarios')"
+    >
+      Pagamentos de Funcionários
+    </button>
+  </nav>
+
+  <section class="filtros" aria-label="Filtros">
+    <label>
+      De
+      <input type="date" [value]="dataInicio()" (change)="dataInicio.set($any($event.target).value); aplicarFiltros()" />
+    </label>
+    <label>
+      Até
+      <input type="date" [value]="dataFim()" (change)="dataFim.set($any($event.target).value); aplicarFiltros()" />
+    </label>
+    <label>
+      Status
+      <select [value]="status()" (change)="status.set($any($event.target).value); aplicarFiltros()">
+        <option value="">Todos</option>
+        @if (abaAtiva() === 'receber') {
+          <option value="PENDENTE">Pendente</option>
+          <option value="RECEBIDA">Recebida</option>
+          <option value="CANCELADA">Cancelada</option>
+        } @else {
+          <option value="PENDENTE">Pendente</option>
+          <option value="PAGO">Pago</option>
+          <option value="CANCELADO">Cancelado</option>
+        }
+      </select>
+    </label>
+    <label>
+      Tipo de trabalho
+      <select [value]="tipoTrabalhoId()" (change)="tipoTrabalhoId.set($any($event.target).value); aplicarFiltros()">
+        <option value="">Todos</option>
+        @for (tipo of tiposTrabalho(); track tipo.id) {
+          <option [value]="tipo.id">{{ tipo.nome }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      Tipo de sede
+      <select [value]="tipoSede()" (change)="tipoSede.set($any($event.target).value); aplicarFiltros()">
+        <option value="">Todas</option>
+        <option value="HUB">Hub</option>
+        <option value="EXTERNA">Externa</option>
+      </select>
+    </label>
+  </section>
+</header>
+
+@switch (estado()) {
+  @case ('carregando') {
+    <p class="estado">Carregando…</p>
+  }
+  @case ('erro') {
+    <p class="estado estado--erro">Não foi possível carregar os dados. Tente novamente.</p>
+  }
+  @case ('carregado') {
+    @if (abaAtiva() === 'receber') {
+      @if (resumoComissoes(); as r) {
+        <section class="totais" aria-label="Totais de comissão">
+          <div class="card card--destaque">
+            <span class="card__valor">{{ totalPagamentosAReceber() | number: '1.2-2' }}</span>
+            <span class="card__label">total de pagamentos a receber</span>
+            <span class="card__detalhe">valor a pagar do funcionário + comissão a receber</span>
+          </div>
+          <div class="card">
+            <span class="card__valor">{{ r.totalAReceber | number: '1.2-2' }}</span>
+            <span class="card__label">total de comissão a receber</span>
+          </div>
+          <div class="card">
+            <span class="card__valor">{{ r.proximos7Dias | number: '1.2-2' }}</span>
+            <span class="card__label">próximos 7 dias</span>
+          </div>
+          <div class="card">
+            <span class="card__valor">{{ r.emAtraso | number: '1.2-2' }}</span>
+            <span class="card__label">em atraso</span>
+          </div>
+          <div class="card">
+            <span class="card__valor">{{ r.recebidoNoPeriodo | number: '1.2-2' }}</span>
+            <span class="card__label">recebido no período</span>
+          </div>
+        </section>
+      }
+
+      @if (comissoes().length === 0) {
+        <p class="estado">Nenhuma comissão encontrada para os filtros atuais.</p>
+      } @else {
+        <ul class="lista-itens">
+          @for (item of comissoes(); track item.id) {
+            <li class="item">
+              <div class="item__linha">
+                <span class="item__principal">{{ item.sedeNome }} · {{ item.tipoTrabalhoNome }}</span>
+                <span class="item__status" [class]="'item__status--' + corStatus(item.statusExibicao)">
+                  {{ item.statusExibicao }}
+                </span>
+              </div>
+              <div class="item__detalhe">
+                {{ item.data | date: 'dd/MM/yyyy' }} · {{ item.funcionarioNome }} · pago por {{ item.responsavelPagadorNome }}
+              </div>
+              <div class="item__valores">
+                <span>Gerado: {{ item.valorGerado | number: '1.2-2' }}</span>
+                @if (item.valorFuncionario !== null) {
+                  <span>Funcionário: {{ item.valorFuncionario | number: '1.2-2' }}</span>
+                }
+                @if (item.minhaComissao !== null) {
+                  <span class="item__minha-comissao">Minha comissão: {{ item.minhaComissao | number: '1.2-2' }}</span>
+                } @else {
+                  <span class="item__minha-comissao">Comissão ainda não calculada</span>
+                }
+              </div>
+
+              @if (erroComissao(item); as erro) {
+                <p class="estado estado--erro">{{ erro }}</p>
+              }
+
+              @if (item.minhaComissao !== null && podeMarcarComissaoRecebida(item)) {
+                <button
+                  type="button"
+                  class="item__acao"
+                  [disabled]="marcandoComissao().has(item.id)"
+                  (click)="marcarComissaoRecebida(item)"
+                >
+                  {{ marcandoComissao().has(item.id) ? 'Marcando…' : 'Marcar como recebida' }}
+                </button>
+              }
+            </li>
+          }
+        </ul>
+      }
+    } @else {
+      @if (resumoFuncionarios(); as r) {
+        <section class="totais" aria-label="Totais de pagamentos a funcionários">
+          <div class="card">
+            <span class="card__valor">{{ r.totalAPagar | number: '1.2-2' }}</span>
+            <span class="card__label">total a pagar</span>
+          </div>
+          <div class="card">
+            <span class="card__valor">{{ r.proximos7Dias | number: '1.2-2' }}</span>
+            <span class="card__label">próximos 7 dias</span>
+          </div>
+          <div class="card">
+            <span class="card__valor">{{ r.urgente2Dias | number: '1.2-2' }}</span>
+            <span class="card__label">urgente (2 dias)</span>
+          </div>
+          <div class="card">
+            <span class="card__valor">{{ r.emAtraso | number: '1.2-2' }}</span>
+            <span class="card__label">em atraso</span>
+          </div>
+          <div class="card">
+            <span class="card__valor">{{ r.pagoNoPeriodo | number: '1.2-2' }}</span>
+            <span class="card__label">pago no período</span>
+          </div>
+        </section>
+      }
+
+      @if (pagamentosFuncionarios().length === 0) {
+        <p class="estado">Nenhum pagamento encontrado para os filtros atuais.</p>
+      } @else {
+        <ul class="lista-itens">
+          @for (item of pagamentosFuncionarios(); track item.id) {
+            <li class="item">
+              <div class="item__linha">
+                <span class="item__principal">{{ item.funcionarioNome }} · {{ item.tipoTrabalhoNome }}</span>
+                <span class="item__status" [class]="'item__status--' + corStatus(item.statusExibicao)">
+                  {{ item.statusExibicao }}
+                </span>
+              </div>
+              <div class="item__detalhe">
+                {{ item.data | date: 'dd/MM/yyyy' }} · {{ item.sedeNome }}
+                @if (item.dataPrevista) {
+                  · previsto até {{ item.dataPrevista | date: 'dd/MM/yyyy' }}
+                }
+              </div>
+              <div class="item__valores">
+                <span>Gerado: {{ item.valorGerado | number: '1.2-2' }}</span>
+                <span>
+                  Previsto:
+                  {{ item.valorPrevisto !== null ? (item.valorPrevisto | number: '1.2-2') : 'a definir' }}
+                </span>
+                @if (item.valorPago !== null) {
+                  <span>Pago: {{ item.valorPago | number: '1.2-2' }}</span>
+                }
+                @if (item.comprovanteUrl) {
+                  <a [href]="item.comprovanteUrl" target="_blank" rel="noopener">📎 comprovante</a>
+                }
+              </div>
+
+              @if (podeRegistrar(item)) {
+                @if (linhaExpandida() === item.id) {
+                  <!--
+                    (submit) nativo, não (ngSubmit) — esse só existe com
+                    FormsModule importado (diretiva NgForm), que este
+                    componente não usa (padrão do projeto: bindings
+                    nativos, sem Reactive Forms). Sem isso o clique só
+                    disparava o submit padrão do navegador (reload da
+                    página), sem chamar nada — bug real, não só cache.
+                  -->
+                  <form class="form-registro" novalidate (submit)="$event.preventDefault(); confirmarRegistro(item)">
+                    <label>
+                      Valor pago
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        [value]="formularioRegistro().valorPago"
+                        (input)="atualizarFormulario('valorPago', $any($event.target).valueAsNumber || null)"
+                        required
+                      />
+                    </label>
+                    <label>
+                      Data do pagamento
+                      <input
+                        type="date"
+                        [value]="formularioRegistro().dataPagamento"
+                        (change)="atualizarFormulario('dataPagamento', $any($event.target).value)"
+                        required
+                      />
+                    </label>
+                    <label>
+                      Observação
+                      <textarea
+                        [value]="formularioRegistro().observacao"
+                        (input)="atualizarFormulario('observacao', $any($event.target).value)"
+                      ></textarea>
+                    </label>
+                    <label>
+                      Comprovante
+                      <input
+                        type="file"
+                        accept="image/*"
+                        (change)="selecionarComprovante($any($event.target).files[0] ?? null)"
+                      />
+                    </label>
+
+                    @if (erroRegistro()) {
+                      <p class="estado estado--erro">{{ erroRegistro() }}</p>
+                    }
+                    @if (motivoBloqueioRegistro(); as motivo) {
+                      <p class="aviso-bloqueio">⚠ {{ motivo }}</p>
+                    }
+
+                    <div class="form-registro__acoes">
+                      <button
+                        type="submit"
+                        class="botao-confirmar"
+                        [disabled]="!podeConfirmarRegistro() || registrando()"
+                      >
+                        {{ registrando() ? 'Registrando…' : 'Confirmar pagamento' }}
+                      </button>
+                      <button type="button" (click)="fecharRegistro()" [disabled]="registrando()">
+                        Cancelar
+                      </button>
+                    </div>
+                  </form>
+                } @else {
+                  <button type="button" class="item__acao" (click)="abrirRegistro(item)">
+                    Registrar pagamento
+                  </button>
+                }
+              }
+            </li>
+          }
+        </ul>
+      }
+    }
+  }
+}

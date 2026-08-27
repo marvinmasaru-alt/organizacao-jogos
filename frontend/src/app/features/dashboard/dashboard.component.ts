@@ -3,6 +3,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { paraDataIso } from '../../core/utils/data.util';
+import { PagamentosService } from '../pagamentos/pagamentos.service';
 import { DashboardService } from './dashboard.service';
 import { DashboardResumo, EscopoSedes } from './dashboard.model';
 
@@ -18,6 +19,7 @@ type EstadoTela = 'carregando' | 'erro' | 'vazio' | 'carregado';
 export class DashboardComponent implements OnInit {
   private readonly service = inject(DashboardService);
   private readonly auth = inject(AuthService);
+  private readonly pagamentosService = inject(PagamentosService);
 
   readonly data = signal(paraDataIso(new Date()));
   /**
@@ -32,6 +34,14 @@ export class DashboardComponent implements OnInit {
   readonly estado = signal<EstadoTela>('carregando');
   readonly resumo = signal<DashboardResumo | null>(null);
 
+  /**
+   * Pagamentos pendentes (independente do dia/escopo selecionado acima —
+   * é sempre o total em aberto de hoje pra frente, não uma foto de um dia
+   * só) — carregado uma vez, não precisa recarregar a cada troca de data.
+   */
+  readonly totalAPagarPendente = signal<number | null>(null);
+  readonly totalAReceberPendente = signal<number | null>(null);
+
   /** Cadastro de vagas (docs/features/cadastro-vagas.md) é só Administrador. */
   readonly souAdministrador = computed(
     () => this.auth.usuario()?.perfil === 'ADMINISTRADOR',
@@ -39,6 +49,7 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.carregar();
+    this.carregarPagamentosPendentes();
   }
 
   irParaDataAnterior(): void {
@@ -67,6 +78,17 @@ export class DashboardComponent implements OnInit {
     atual.setDate(atual.getDate() + deltaDias);
     this.data.set(paraDataIso(atual));
     this.carregar();
+  }
+
+  private carregarPagamentosPendentes(): void {
+    this.pagamentosService.resumoPagamentosFuncionarios({}).subscribe({
+      next: (resumo) => this.totalAPagarPendente.set(resumo.totalAPagar),
+      error: () => this.totalAPagarPendente.set(null),
+    });
+    this.pagamentosService.resumoComissoes({}).subscribe({
+      next: (resumo) => this.totalAReceberPendente.set(resumo.totalAReceber),
+      error: () => this.totalAReceberPendente.set(null),
+    });
   }
 
   private carregar(): void {

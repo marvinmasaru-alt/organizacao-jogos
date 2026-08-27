@@ -11,6 +11,7 @@ import {
 } from '@prisma/client';
 import { AlocacoesService } from '../alocacoes/alocacoes.service';
 import { FaltasService } from '../faltas/faltas.service';
+import { PagamentosService } from '../pagamentos/pagamentos.service';
 import { UsuarioAutenticado } from '../auth/auth.service';
 import { PerfilUsuario } from '../common/types/enums';
 import { PrismaService } from '../prisma/prisma.service';
@@ -36,21 +37,29 @@ export class ConfirmacoesService {
     private readonly prisma: PrismaService,
     private readonly alocacoesService: AlocacoesService,
     private readonly faltasService: FaltasService,
+    private readonly pagamentosService: PagamentosService,
   ) {}
 
   /**
-   * Sedes com pelo menos 1 alocação na data, dentro do escopo do usuário —
+   * Sedes com pelo menos 1 alocação, dentro do escopo do usuário —
    * inclusive quando TODAS as alocações daquela sede/dia já foram
    * canceladas (histórico nunca some, mesmo princípio de resumoDaSede: uma
    * sede não deve sumir da lista só porque a única pessoa alocada acabou
    * cancelando).
+   *
+   * `data` ausente ("Todos", decisão do usuário) lista sedes+dia sem
+   * filtrar por uma data específica — cada combinação sede+dia distinta
+   * vira sua própria linha (a mesma sede pode aparecer mais de uma vez se
+   * tiver pendência em dias diferentes), ordenada por data mais recente
+   * primeiro. Com `data`, mantém o comportamento de sempre: uma linha por
+   * sede, todas com a mesma data.
    */
   async listarSedesComAlocacoes(
-    data: string,
+    data: string | undefined,
     usuario: UsuarioAutenticado,
     escopo: EscopoSedes = 'todas',
   ): Promise<SedeComConfirmacoes[]> {
-    const dataRef = new Date(data);
+    const dataRef = data ? new Date(data) : undefined;
     // Responsável nunca vê sede alheia nesta tela — regra própria da
     // Confirmação do Dia (docs/features/confirmacao-dia.md, seção 5), mais
     // restritiva que a visibilidade geral de sedes. Administrador vê tudo
@@ -74,29 +83,37 @@ export class ConfirmacoesService {
       include: { confirmacao: true, vaga: { include: { sede: true } } },
     });
 
-    const porSede = new Map<
+    const porSedeEDia = new Map<
       string,
-      { sede: { id: string; nome: string; sigla: string }; statuses: (StatusConfirmacao | null)[] }
+      {
+        sede: { id: string; nome: string; sigla: string };
+        data: string;
+        statuses: (StatusConfirmacao | null)[];
+      }
     >();
     for (const a of alocacoes) {
       const sede = a.vaga.sede;
-      const grupo = porSede.get(sede.id) ?? {
+      const dataIso = a.vaga.data.toISOString().slice(0, 10);
+      const chave = `${sede.id}|${dataIso}`;
+      const grupo = porSedeEDia.get(chave) ?? {
         sede: { id: sede.id, nome: sede.nome, sigla: sede.sigla },
+        data: dataIso,
         statuses: [],
       };
       grupo.statuses.push(a.confirmacao?.status ?? null);
-      porSede.set(sede.id, grupo);
+      porSedeEDia.set(chave, grupo);
     }
 
-    return [...porSede.values()]
-      .map(({ sede, statuses }) => ({
+    return [...porSedeEDia.values()]
+      .map(({ sede, data: dataDaLinha, statuses }) => ({
         sedeId: sede.id,
         nome: sede.nome,
         sigla: sede.sigla,
+        data: dataDaLinha,
         totalAlocados: statuses.length,
         statusDia: this.calcularStatusDia(statuses),
       }))
-      .sort((a, b) => a.sigla.localeCompare(b.sigla));
+      .sort((a, b) => (data ? 0 : b.data.localeCompare(a.data)) || a.sigla.localeCompare(b.sigla));
   }
 
   /** Resumo por tipo + lista de funcionários de uma sede/dia (passo 3 da tela). */
@@ -252,7 +269,7 @@ export class ConfirmacoesService {
   ): Promise<void> {
     const alocacao = await this.prisma.alocacao.findUnique({
       where: { id: alocacaoId },
-      include: { vaga: true },
+      include: { vaga: { include: { sede: true } } },
     });
     if (!alocacao) {
       throw new NotFoundException(`Alocação ${alocacaoId} não encontrada.`);
@@ -275,6 +292,10 @@ export class ConfirmacoesService {
     }
 
     if (status === 'CANCELOU') {
+      // Falta/cancelamento cancela o pagamento (CLAUDE.md) — antes de
+      // delegar pro fluxo que já existe, vira a obrigação financeira
+      // (se houver) pra CANCELADA, nunca apaga (docs/features/pagamento.md).
+      await this.pagamentosService.cancelarObrigacoesParaAlocacao(alocacaoId);
       await this.alocacoesService.cancelar(
         alocacaoId,
         observacao ?? 'Cancelado na confirmação do dia.',
@@ -284,6 +305,7 @@ export class ConfirmacoesService {
     }
 
     if (status === 'FALTOU') {
+      await this.pagamentosService.cancelarObrigacoesParaAlocacao(alocacaoId);
       await this.faltasService.registrar({
         alocacaoId,
         necessitaSubstituicaoUrgente,
@@ -295,16 +317,41 @@ export class ConfirmacoesService {
     // TRABALHOU -> PRESENTE / SUBSTITUIU -> SUBSTITUIU (ambos são "essa
     // pessoa trabalhou", só muda o status gravado — ver resumoDaSede pra
     // como SUBSTITUIU abate a contagem de substituições urgentes).
-    await this.prisma.confirmacao.update({
+    //
+    // `upsert`, não `update`: toda alocação nova deveria sempre nascer com
+    // uma `confirmacao` PENDENTE (criada na mesma transação, ver
+    // AlocacoesService.gravarEmLote), mas registros legados/importados por
+    // fora do fluxo normal podem não ter essa linha — um `update` cego
+    // nesses casos quebra com um 500 feio (P2025) em vez de um erro
+    // tratável. `upsert` deixa o sistema se autocurar nesse cenário.
+    const statusConfirmacao =
+      status === 'SUBSTITUIU' ? StatusConfirmacao.SUBSTITUIU : StatusConfirmacao.PRESENTE;
+    await this.prisma.confirmacao.upsert({
       where: { alocacaoId },
-      data: {
-        status:
-          status === 'SUBSTITUIU'
-            ? StatusConfirmacao.SUBSTITUIU
-            : StatusConfirmacao.PRESENTE,
+      create: {
+        alocacaoId,
+        status: statusConfirmacao,
         observacao: observacao ?? null,
         confirmadoEm: new Date(),
       },
+      update: {
+        status: statusConfirmacao,
+        observacao: observacao ?? null,
+        confirmadoEm: new Date(),
+      },
+    });
+
+    // Funcionário confirmado como tendo trabalhado gera a obrigação de
+    // pagamento + a comissão (docs/features/pagamento.md) — idempotente,
+    // ver PagamentosService.criarObrigacoesParaAlocacao.
+    await this.pagamentosService.criarObrigacoesParaAlocacao({
+      id: alocacao.id,
+      funcionarioId: alocacao.funcionarioId,
+      responsavelId: alocacao.responsavelId,
+      tipoTrabalhoId: alocacao.tipoTrabalhoId,
+      data: alocacao.vaga.data,
+      tipoSede: alocacao.vaga.sede.tipoSede,
+      responsavelSedeId: alocacao.vaga.sede.responsavelId,
     });
   }
 

@@ -62,7 +62,7 @@ export class AuthService {
       return null;
     }
 
-    const senhaValida = senha === usuario.senhaHash;
+    const senhaValida = await bcrypt.compare(senha, usuario.senhaHash);
     if (!senhaValida) {
       return null;
     }

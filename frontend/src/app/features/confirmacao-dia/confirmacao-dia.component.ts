@@ -13,6 +13,8 @@ import {
 } from './confirmacao-dia.model';
 
 type Estado = 'carregando' | 'erro' | 'carregado';
+/** "porDia" = comportamento de sempre (filtra por uma data); "todos" = sem filtro de data, uma linha por sede+dia pendente. */
+type ModoFiltro = 'todos' | 'porDia';
 
 /**
  * Confirmação do Dia (docs/features/confirmacao-dia.md). Fluxo em 3 passos:
@@ -35,6 +37,8 @@ export class ConfirmacaoDiaComponent implements OnInit {
   private readonly auth = inject(AuthService);
 
   readonly data = signal(paraDataIso(new Date()));
+  /** "Todos" x "Por dia" (decisão do usuário) — só no modo "porDia" o seletor de data aparece/filtra. */
+  readonly modoFiltro = signal<ModoFiltro>('porDia');
   /**
    * Só Administrador vê o seletor — Responsável nunca tem escolha nesta
    * tela (sempre só a própria sede, regra própria da Confirmação do Dia,
@@ -50,6 +54,14 @@ export class ConfirmacaoDiaComponent implements OnInit {
   readonly sedes = signal<SedeComConfirmacoes[]>([]);
 
   readonly sedeSelecionadaId = signal<string | null>(null);
+  /**
+   * Data da sede selecionada (passo 3) — vem da própria linha escolhida em
+   * `selecionarSede`, nunca de `data()` diretamente: no modo "todos" cada
+   * linha da lista carrega sua própria data (a mesma sede pode aparecer
+   * mais de uma vez, uma por dia pendente), então não dá pra assumir que é
+   * a data do filtro global.
+   */
+  readonly dataDetalheSelecionada = signal<string | null>(null);
   readonly estadoDetalhe = signal<Estado>('carregando');
   readonly detalhe = signal<ResumoConfirmacaoSede | null>(null);
 
@@ -154,9 +166,17 @@ export class ConfirmacaoDiaComponent implements OnInit {
     this.carregarSedes();
   }
 
+  /** Alterna entre "Todos" (sem filtro de data) e "Por dia" (mostra o seletor de data) — recarrega a lista de sedes. */
+  selecionarModoFiltro(modo: string): void {
+    this.modoFiltro.set(modo === 'todos' ? 'todos' : 'porDia');
+    this.voltarParaSedes();
+    this.carregarSedes();
+  }
+
   private carregarSedes(): void {
     this.estadoSedes.set('carregando');
-    this.service.listarSedes(this.data(), this.escopo()).subscribe({
+    const dataFiltro = this.modoFiltro() === 'porDia' ? this.data() : null;
+    this.service.listarSedes(dataFiltro, this.escopo()).subscribe({
       next: (sedes) => {
         this.sedes.set(sedes);
         this.estadoSedes.set('carregado');
@@ -176,6 +196,7 @@ export class ConfirmacaoDiaComponent implements OnInit {
 
   selecionarSede(sede: SedeComConfirmacoes): void {
     this.sedeSelecionadaId.set(sede.sedeId);
+    this.dataDetalheSelecionada.set(sede.data);
     this.erroFinalizar.set(null);
     this.mensagemFinalizar.set(null);
     this.erroReabrir.set(null);
@@ -185,6 +206,7 @@ export class ConfirmacaoDiaComponent implements OnInit {
 
   voltarParaSedes(): void {
     this.sedeSelecionadaId.set(null);
+    this.dataDetalheSelecionada.set(null);
     this.detalhe.set(null);
     this.erroFinalizar.set(null);
     this.mensagemFinalizar.set(null);
@@ -194,9 +216,10 @@ export class ConfirmacaoDiaComponent implements OnInit {
 
   private carregarDetalhe(): void {
     const sedeId = this.sedeSelecionadaId();
-    if (!sedeId) return;
+    const dataDetalhe = this.dataDetalheSelecionada();
+    if (!sedeId || !dataDetalhe) return;
     this.estadoDetalhe.set('carregando');
-    this.service.resumoDaSede(sedeId, this.data()).subscribe({
+    this.service.resumoDaSede(sedeId, dataDetalhe).subscribe({
       next: (detalhe) => {
         this.detalhe.set(detalhe);
         this.estadoDetalhe.set('carregado');
@@ -213,8 +236,9 @@ export class ConfirmacaoDiaComponent implements OnInit {
    */
   private recarregarDetalheSilencioso(): void {
     const sedeId = this.sedeSelecionadaId();
-    if (!sedeId) return;
-    this.service.resumoDaSede(sedeId, this.data()).subscribe({
+    const dataDetalhe = this.dataDetalheSelecionada();
+    if (!sedeId || !dataDetalhe) return;
+    this.service.resumoDaSede(sedeId, dataDetalhe).subscribe({
       next: (detalhe) => this.detalhe.set(detalhe),
       error: () => this.estadoDetalhe.set('erro'),
     });
@@ -304,11 +328,12 @@ export class ConfirmacaoDiaComponent implements OnInit {
 
   finalizarConferencia(): void {
     const sedeId = this.sedeSelecionadaId();
-    if (!sedeId || !this.podeFinalizar()) return;
+    const dataDetalhe = this.dataDetalheSelecionada();
+    if (!sedeId || !dataDetalhe || !this.podeFinalizar()) return;
     this.finalizando.set(true);
     this.erroFinalizar.set(null);
     this.mensagemFinalizar.set(null);
-    this.service.finalizar(sedeId, this.data()).subscribe({
+    this.service.finalizar(sedeId, dataDetalhe).subscribe({
       next: (detalhe) => {
         this.finalizando.set(false);
         this.detalhe.set(detalhe);
@@ -326,11 +351,12 @@ export class ConfirmacaoDiaComponent implements OnInit {
   /** Só Administrador vê o botão (backend também rejeita pra qualquer outro perfil). */
   reabrirConferencia(): void {
     const sedeId = this.sedeSelecionadaId();
-    if (!sedeId || !this.estaFinalizada()) return;
+    const dataDetalhe = this.dataDetalheSelecionada();
+    if (!sedeId || !dataDetalhe || !this.estaFinalizada()) return;
     this.reabrindo.set(true);
     this.erroReabrir.set(null);
     this.mensagemFinalizar.set(null);
-    this.service.reabrir(sedeId, this.data()).subscribe({
+    this.service.reabrir(sedeId, dataDetalhe).subscribe({
       next: (detalhe) => {
         this.reabrindo.set(false);
         this.detalhe.set(detalhe);

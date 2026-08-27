@@ -204,14 +204,25 @@ export class AlocacoesService {
       ? await this.prisma.usuario.findUnique({ where: { email: usuarioEmail } })
       : null;
 
+    // `upsert`, não `update` — ver comentário equivalente em
+    // ConfirmacoesService.atualizarSituacao (registro legado sem
+    // `confirmacao` nunca deveria existir, mas se existir não pode
+    // quebrar com 500).
     await this.prisma.$transaction([
       this.prisma.alocacao.update({
         where: { id },
         data: { status: StatusAlocacao.CANCELADA },
       }),
-      this.prisma.confirmacao.update({
+      this.prisma.confirmacao.upsert({
         where: { alocacaoId: id },
-        data: {
+        create: {
+          alocacaoId: id,
+          status: StatusConfirmacao.CANCELOU,
+          observacao: motivo,
+          confirmadoPor: usuario?.id,
+          confirmadoEm: new Date(),
+        },
+        update: {
           status: StatusConfirmacao.CANCELOU,
           observacao: motivo,
           confirmadoPor: usuario?.id,

@@ -62,6 +62,15 @@ CREATE TYPE status_pagamento AS ENUM (
     'CANCELADO'
 );
 
+-- Status de recebimento da comissão — independente do status_pagamento do
+-- funcionário (pagar o funcionário e receber a comissão são eventos
+-- distintos). Ver comentário da tabela comissoes.
+CREATE TYPE status_comissao AS ENUM (
+    'PENDENTE',
+    'RECEBIDA',
+    'CANCELADA'
+);
+
 
 
 -- =====================================
@@ -450,6 +459,10 @@ CREATE TABLE conferencias_dia (
 -- TABELA DE VALORES
 -- =====================================
 
+-- valor = valor gerado (o que a sede paga pelo trabalho); salario_base =
+-- valor-base do funcionário, obrigatório só em sede EXTERNA (em HUB o
+-- pagamento ao funcionário é livre, salario_base fica sempre null —
+-- docs/features/pagamento.md, seções 4/6/7).
 CREATE TABLE tabela_valores (
 
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -459,6 +472,8 @@ CREATE TABLE tabela_valores (
     tipo_sede tipo_sede NOT NULL,
 
     valor NUMERIC(10,2) NOT NULL,
+
+    salario_base NUMERIC(10,2),
 
     data_inicio DATE,
 
@@ -478,6 +493,11 @@ CREATE TABLE tabela_valores (
 
 -- =====================================
 -- PAGAMENTOS
+-- Obrigação de pagar o FUNCIONÁRIO por uma alocação confirmada
+-- (docs/features/pagamento.md). responsavel_id é sempre o dono do
+-- funcionário (quem paga — seção 15). valor_previsto e valor_pago ficam
+-- sempre separados (seção 27/28); valor_previsto fica null em sede HUB
+-- até o pagamento ser registrado (valor livre).
 -- =====================================
 
 CREATE TABLE pagamentos (
@@ -492,7 +512,13 @@ CREATE TABLE pagamentos (
 
     funcionario_id UUID NOT NULL,
 
-    valor NUMERIC(10,2) NOT NULL,
+    valor_gerado NUMERIC(10,2) NOT NULL,
+
+    valor_previsto NUMERIC(10,2),
+
+    valor_pago NUMERIC(10,2),
+
+    comprovante_url TEXT,
 
     data_prevista DATE,
 
@@ -516,6 +542,67 @@ CREATE TABLE pagamentos (
 
     FOREIGN KEY(funcionario_id)
         REFERENCES funcionarios(id)
+);
+
+
+
+-- =====================================
+-- COMISSOES
+-- Split de comissão entre dono da sede e dono do funcionário, quando são
+-- responsáveis diferentes (docs/features/pagamento.md, seções 8-14). 1:1
+-- com alocacoes, mesma âncora de idempotência de pagamentos.
+-- status_sede/status_fornecimento são independentes do status_pagamento
+-- do pagamento ligado (decisão do usuário): pagar o funcionário e
+-- receber a comissão são dois eventos financeiros distintos, cada perna
+-- marcada como recebida separadamente (pode ser gente diferente em
+-- momentos diferentes). valor_comissao_fornecimento pode ser NEGATIVO
+-- (seção 13/14 — dono do funcionário pode ficar devendo os ¥1.000 do
+-- dono da sede). Quando o mesmo responsável é dono da sede e do
+-- funcionário, todo o resultado fica na perna de fornecimento
+-- (valor_comissao_sede = 0), pra não contar em dobro — só o status dessa
+-- perna importa nesse caso.
+-- =====================================
+
+CREATE TABLE comissoes (
+
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    alocacao_id UUID UNIQUE NOT NULL,
+
+    valor_gerado NUMERIC(10,2) NOT NULL,
+
+    valor_funcionario NUMERIC(10,2),
+
+    resultado_calculado NUMERIC(10,2),
+
+    responsavel_sede_id UUID NOT NULL,
+
+    valor_comissao_sede NUMERIC(10,2),
+
+    status_sede status_comissao NOT NULL DEFAULT 'PENDENTE',
+
+    recebido_sede_em TIMESTAMP,
+
+    responsavel_fornecimento_id UUID NOT NULL,
+
+    valor_comissao_fornecimento NUMERIC(10,2),
+
+    status_fornecimento status_comissao NOT NULL DEFAULT 'PENDENTE',
+
+    recebido_fornecimento_em TIMESTAMP,
+
+    created_at TIMESTAMP DEFAULT NOW(),
+
+    updated_at TIMESTAMP DEFAULT NOW(),
+
+    FOREIGN KEY(alocacao_id)
+        REFERENCES alocacoes(id),
+
+    FOREIGN KEY(responsavel_sede_id)
+        REFERENCES responsaveis(id),
+
+    FOREIGN KEY(responsavel_fornecimento_id)
+        REFERENCES responsaveis(id)
 );
 
 
@@ -546,3 +633,11 @@ ON alocacoes(vaga_id);
 
 CREATE INDEX idx_pagamentos_status
 ON pagamentos(status);
+
+
+CREATE INDEX idx_comissoes_responsavel_sede
+ON comissoes(responsavel_sede_id);
+
+
+CREATE INDEX idx_comissoes_responsavel_fornecimento
+ON comissoes(responsavel_fornecimento_id);

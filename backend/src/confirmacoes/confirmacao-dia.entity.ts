@@ -15,11 +15,17 @@ export type StatusDia = 'PENDENTE' | 'EM_CONFERENCIA' | 'CONFERIDO';
  */
 export type EscopoSedes = 'minha' | 'todas';
 
-/** Item da lista de sedes com atividade numa data (passo 2 da tela). */
+/**
+ * Item da lista de sedes com atividade numa data (passo 2 da tela) — no
+ * modo "Todos" (sem filtrar por um dia específico) cada linha é uma
+ * combinação sede+dia distinta, então a mesma sede pode aparecer mais de
+ * uma vez se tiver pendência em dias diferentes.
+ */
 export interface SedeComConfirmacoes {
   sedeId: string;
   nome: string;
   sigla: string;
+  data: string;
   totalAlocados: number;
   statusDia: StatusDia;
 }

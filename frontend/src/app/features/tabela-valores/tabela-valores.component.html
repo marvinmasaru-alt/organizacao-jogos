@@ -1,0 +1,180 @@
+<header class="cabecalho">
+  <a class="link-voltar-dashboard" routerLink="/dashboard">← Dashboard</a>
+  <h1>Tabela de Valores</h1>
+</header>
+
+<section class="secao" aria-label="Lista de valores">
+  <p class="ajuda">
+    Valor gerado (o que a sede paga pelo trabalho) por tipo de trabalho +
+    tipo de sede. Em sede EXTERNA, o salário-base do funcionário também é
+    obrigatório aqui — em HUB o pagamento ao funcionário é livre, definido
+    na hora de registrar o pagamento.
+  </p>
+
+  @switch (estado()) {
+    @case ('carregando') {
+      <p class="estado">Carregando…</p>
+    }
+    @case ('erro') {
+      <p class="estado estado--erro">Não foi possível carregar a tabela de valores.</p>
+    }
+    @case ('carregado') {
+      @if (linhas().length === 0) {
+        <p class="estado">Nenhum valor cadastrado ainda.</p>
+      } @else {
+        <ul class="lista-tipos">
+          @for (linha of linhas(); track linha.id) {
+            <li class="tipo-item" [class.tipo-item--inativo]="!linha.ativo">
+              @if (editandoId() === linha.id) {
+                <div class="tipo-item__form">
+                  <span class="tipo-item__tipo-fixo">{{ nomeTipo(linha.tipoTrabalhoId) }}</span>
+                  <select
+                    [value]="linhaEdicao().tipoSede"
+                    (change)="atualizarLinhaEdicao('tipoSede', $any($event.target).value)"
+                  >
+                    <option value="EXTERNA">Externa</option>
+                    <option value="HUB">HUB</option>
+                  </select>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Valor gerado"
+                    [value]="linhaEdicao().valor"
+                    (input)="atualizarLinhaEdicao('valor', $any($event.target).valueAsNumber)"
+                  />
+                  @if (linhaEdicao().tipoSede === 'EXTERNA') {
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Salário-base"
+                      [value]="linhaEdicao().salarioBase"
+                      (input)="atualizarLinhaEdicao('salarioBase', $any($event.target).valueAsNumber)"
+                    />
+                  }
+                </div>
+                <div class="tipo-item__acoes">
+                  <button
+                    type="button"
+                    class="botao-salvar"
+                    [disabled]="salvandoEdicao() || !podeSalvarEdicao()"
+                    (click)="salvarEdicao(linha.id)"
+                  >
+                    {{ salvandoEdicao() ? 'Salvando…' : 'Salvar' }}
+                  </button>
+                  <button type="button" (click)="cancelarEdicao()">Cancelar</button>
+                </div>
+                @if (erroEdicao()) {
+                  <p class="estado estado--erro">{{ erroEdicao() }}</p>
+                }
+              } @else {
+                <span class="tipo-item__nome">
+                  {{ nomeTipo(linha.tipoTrabalhoId) }} — {{ linha.tipoSede === 'HUB' ? 'HUB' : 'Externa' }}
+                  @if (!linha.ativo) {
+                    <span class="tipo-item__badge">Inativo</span>
+                  }
+                </span>
+                <span class="tipo-item__valores">
+                  Gerado: ¥{{ linha.valor }}
+                  @if (linha.salarioBase != null) {
+                    · Salário-base: ¥{{ linha.salarioBase }}
+                  } @else {
+                    · Pagamento livre
+                  }
+                </span>
+                <div class="tipo-item__acoes">
+                  <button type="button" (click)="iniciarEdicao(linha)">Editar</button>
+                  <button
+                    type="button"
+                    [class.botao-desativar]="linha.ativo"
+                    [class.botao-ativar]="!linha.ativo"
+                    [disabled]="alternandoAtivo().has(linha.id)"
+                    (click)="alternarAtivo(linha)"
+                  >
+                    {{ linha.ativo ? 'Desativar' : 'Reativar' }}
+                  </button>
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      }
+    }
+  }
+</section>
+
+<section class="secao" aria-label="Novo valor">
+  <h2>Novo valor</h2>
+  <form class="form" (submit)="$event.preventDefault(); criar()">
+    <label>
+      Tipo de trabalho
+      <select
+        [value]="novaLinha().tipoTrabalhoId"
+        (change)="atualizarNovaLinha('tipoTrabalhoId', $any($event.target).value)"
+      >
+        <option value="" disabled>Selecione…</option>
+        @for (tipo of tiposTrabalho(); track tipo.id) {
+          <option [value]="tipo.id">{{ tipo.nome }}</option>
+        }
+      </select>
+    </label>
+
+    <label>
+      Tipo de sede
+      <select
+        [value]="novaLinha().tipoSede"
+        (change)="atualizarNovaLinha('tipoSede', $any($event.target).value)"
+      >
+        <option value="EXTERNA">Externa</option>
+        <option value="HUB">HUB</option>
+      </select>
+    </label>
+
+    <label>
+      Valor gerado (¥)
+      <input
+        type="number"
+        min="0"
+        [value]="novaLinha().valor"
+        (input)="atualizarNovaLinha('valor', $any($event.target).valueAsNumber)"
+      />
+    </label>
+
+    @if (novaLinha().tipoSede === 'EXTERNA') {
+      <label>
+        Salário-base do funcionário (¥)
+        <input
+          type="number"
+          min="0"
+          [value]="novaLinha().salarioBase"
+          (input)="atualizarNovaLinha('salarioBase', $any($event.target).valueAsNumber)"
+        />
+      </label>
+    }
+
+    <div class="periodo">
+      <label>
+        Vigência a partir de (opcional)
+        <input
+          type="date"
+          [value]="novaLinha().dataInicio"
+          (change)="atualizarNovaLinha('dataInicio', $any($event.target).value)"
+        />
+      </label>
+      <label>
+        Vigência até (opcional)
+        <input
+          type="date"
+          [value]="novaLinha().dataFim"
+          (change)="atualizarNovaLinha('dataFim', $any($event.target).value)"
+        />
+      </label>
+    </div>
+
+    @if (erroCriar()) {
+      <p class="estado estado--erro">{{ erroCriar() }}</p>
+    }
+    <button type="submit" class="botao-confirmar" [disabled]="criando() || !podeCriar()">
+      {{ criando() ? 'Criando…' : 'Criar valor' }}
+    </button>
+  </form>
+</section>

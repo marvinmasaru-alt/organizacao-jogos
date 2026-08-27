@@ -2,16 +2,28 @@
   <a class="link-voltar-dashboard" routerLink="/dashboard">← Dashboard</a>
   <h1>Confirmação do Dia</h1>
   <div class="linha-controles">
-    <div class="seletor-data">
-      <button type="button" (click)="irParaDataAnterior()" aria-label="Dia anterior">←</button>
-      <input
-        type="date"
-        [value]="data()"
-        (change)="selecionarData($any($event.target).value)"
-        aria-label="Selecionar data"
-      />
-      <button type="button" (click)="irParaProximaData()" aria-label="Próximo dia">→</button>
-    </div>
+    <select
+      class="seletor-modo-filtro"
+      [value]="modoFiltro()"
+      (change)="selecionarModoFiltro($any($event.target).value)"
+      aria-label="Filtrar por data"
+    >
+      <option value="porDia">Por dia</option>
+      <option value="todos">Todos</option>
+    </select>
+
+    @if (modoFiltro() === 'porDia') {
+      <div class="seletor-data">
+        <button type="button" (click)="irParaDataAnterior()" aria-label="Dia anterior">←</button>
+        <input
+          type="date"
+          [value]="data()"
+          (change)="selecionarData($any($event.target).value)"
+          aria-label="Selecionar data"
+        />
+        <button type="button" (click)="irParaProximaData()" aria-label="Próximo dia">→</button>
+      </div>
+    }
 
     @if (mostrarSeletorDeEscopo()) {
       <select
@@ -39,13 +51,18 @@
       }
       @case ('carregado') {
         @if (sedes().length === 0) {
-          <p class="estado">Nenhuma alocação encontrada para esta data.</p>
+          <p class="estado">
+            {{ modoFiltro() === 'porDia' ? 'Nenhuma alocação encontrada para esta data.' : 'Nenhuma alocação encontrada.' }}
+          </p>
         } @else {
           <ul class="lista-sedes">
-            @for (sede of sedes(); track sede.sedeId) {
+            @for (sede of sedes(); track sede.sedeId + '|' + sede.data) {
               <li>
                 <button type="button" class="sede-item" (click)="selecionarSede(sede)">
                   <strong>{{ sede.nome }}</strong>
+                  @if (modoFiltro() === 'todos') {
+                    <span>{{ sede.data | date: 'dd/MM/yyyy' }}</span>
+                  }
                   <span>{{ sede.totalAlocados }} funcionário(s) alocado(s)</span>
                   <span class="sede-item__status sede-item__status--{{ sede.statusDia | lowercase }}">
                     {{ sede.statusDia === 'CONFERIDO' ? '✓ Conferido' : sede.statusDia === 'EM_CONFERENCIA' ? 'Em conferência' : 'Pendente' }}

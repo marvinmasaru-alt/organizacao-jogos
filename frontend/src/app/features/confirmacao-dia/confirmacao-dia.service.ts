@@ -14,10 +14,11 @@ import {
 export class ConfirmacaoDiaService {
   private readonly http = inject(HttpClient);
 
-  listarSedes(data: string, escopo: EscopoSedes): Observable<SedeComConfirmacoes[]> {
-    return this.http.get<SedeComConfirmacoes[]>(`${API_BASE_URL}/confirmacoes`, {
-      params: { data, escopo },
-    });
+  /** `data` ausente = modo "Todos" (sem filtrar por um dia específico). */
+  listarSedes(data: string | null, escopo: EscopoSedes): Observable<SedeComConfirmacoes[]> {
+    const params: Record<string, string> = { escopo };
+    if (data) params['data'] = data;
+    return this.http.get<SedeComConfirmacoes[]>(`${API_BASE_URL}/confirmacoes`, { params });
   }
 
   resumoDaSede(sedeId: string, data: string): Observable<ResumoConfirmacaoSede> {

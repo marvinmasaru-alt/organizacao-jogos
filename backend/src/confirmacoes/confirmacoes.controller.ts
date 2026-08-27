@@ -21,21 +21,26 @@ export class ConfirmacoesController {
   constructor(private readonly service: ConfirmacoesService) {}
 
   /**
-   * Sem `sedeId`: lista de sedes com atividade no dia. Com `sedeId`: resumo
-   * detalhado. `escopo` ("minha"/"todas") só se aplica à listagem — é
-   * ignorado (RESPONSAVEL sempre vê só a própria sede nesta tela) ou opt-in
-   * pra Administrador (padrão "todas", mas ele pode filtrar pra "minha"
-   * quando também é responsável por alguma sede).
+   * Sem `sedeId`: lista de sedes com atividade. Com `sedeId`: resumo
+   * detalhado de uma sede/dia (aí `data` é sempre obrigatório — mesmo no
+   * modo "Todos" da listagem, cada linha carrega sua própria data e é essa
+   * que chega aqui ao selecionar). `data` ausente na listagem é o modo
+   * "Todos" (decisão do usuário): sem filtrar por um dia específico, cada
+   * combinação sede+dia distinta vira uma linha. `escopo` ("minha"/
+   * "todas") só se aplica à listagem — é ignorado (RESPONSAVEL sempre vê só
+   * a própria sede nesta tela) ou opt-in pra Administrador (padrão
+   * "todas", mas ele pode filtrar pra "minha" quando também é responsável
+   * por alguma sede).
    */
   @Get()
   listar(
-    @Query('data') data: string,
+    @Query('data') data: string | undefined,
     @Query('sedeId') sedeId: string | undefined,
     @Query('escopo') escopo: 'minha' | 'todas' | undefined,
     @Req() req: RequestComSessao,
   ) {
     return sedeId
-      ? this.service.resumoDaSede(sedeId, data, req.user)
+      ? this.service.resumoDaSede(sedeId, data!, req.user)
       : this.service.listarSedesComAlocacoes(data, req.user, escopo);
   }
 

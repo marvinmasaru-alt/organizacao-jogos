@@ -10,7 +10,9 @@
   @if (souAdministrador()) {
     <a class="link-configurar-vagas" routerLink="/configuracoes-vagas">⚙ Configurar vagas</a>
     <a class="link-configurar-vagas" routerLink="/tipos-trabalho">⚙ Tipos de trabalho</a>
+    <a class="link-configurar-vagas" routerLink="/tabela-valores">⚙ Tabela de valores</a>
   }
+  <a class="link-configurar-vagas" routerLink="/pagamentos">💰 Pagamentos</a>
   <div class="seletor-data">
     <button type="button" (click)="irParaDataAnterior()" aria-label="Dia anterior">←</button>
     <input
@@ -49,8 +51,13 @@
     @if (resumo(); as r) {
       <section class="pendencias" aria-label="Pendências">
         <h2>Pendências</h2>
-        @if (r.pendencias.substituicoesUrgentes.length === 0 && r.pendencias.vagasIncompletas.length === 0) {
-          <p>Nenhuma pendência para esta data.</p>
+        @if (
+          r.pendencias.substituicoesUrgentes.length === 0 &&
+          r.pendencias.vagasIncompletas.length === 0 &&
+          (totalAPagarPendente() ?? 0) === 0 &&
+          (totalAReceberPendente() ?? 0) === 0
+        ) {
+          <p>Nenhuma pendência.</p>
         } @else {
           @if (r.pendencias.substituicoesUrgentes.length > 0) {
             <h3 class="pendencias__subtitulo pendencias__subtitulo--urgente">
@@ -84,6 +91,24 @@
               }
             </ul>
           }
+        }
+
+        @if ((totalAPagarPendente() ?? 0) > 0 || (totalAReceberPendente() ?? 0) > 0) {
+          <h3 class="pendencias__subtitulo pendencias__subtitulo--financeiro">💰 Pagamentos pendentes</h3>
+          <ul>
+            @if ((totalAPagarPendente() ?? 0) > 0) {
+              <li>
+                {{ totalAPagarPendente() | number: '1.2-2' }} a pagar a funcionários —
+                <a routerLink="/pagamentos">ver</a>
+              </li>
+            }
+            @if ((totalAReceberPendente() ?? 0) > 0) {
+              <li>
+                {{ totalAReceberPendente() | number: '1.2-2' }} de comissão a receber —
+                <a routerLink="/pagamentos">ver</a>
+              </li>
+            }
+          </ul>
         }
       </section>
 

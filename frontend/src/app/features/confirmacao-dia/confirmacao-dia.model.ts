@@ -9,11 +9,16 @@ export type StatusDia = 'PENDENTE' | 'EM_CONFERENCIA' | 'CONFERIDO';
 /** "minha" = só a(s) sede(s) do usuário; "todas" = sem filtro (só conveniência de visualização). */
 export type EscopoSedes = 'minha' | 'todas';
 
-/** Espelha backend/src/confirmacoes/confirmacao-dia.entity.ts. */
+/**
+ * Espelha backend/src/confirmacoes/confirmacao-dia.entity.ts. No modo
+ * "Todos" (sem filtro de data) cada linha é uma combinação sede+dia
+ * distinta — a mesma sede pode aparecer mais de uma vez.
+ */
 export interface SedeComConfirmacoes {
   sedeId: string;
   nome: string;
   sigla: string;
+  data: string;
   totalAlocados: number;
   statusDia: StatusDia;
 }

@@ -81,6 +81,19 @@ enum StatusPagamento {
   @@map("status_pagamento")
 }
 
+/// Status de recebimento da comissão — independente do StatusPagamento do
+/// funcionário (decisão do usuário: pagar o funcionário e receber a
+/// comissão são dois eventos financeiros distintos, um não implica o
+/// outro). Cada perna (sede/fornecimento) tem o seu, porque pode ser gente
+/// diferente recebendo em momentos diferentes.
+enum StatusComissao {
+  PENDENTE
+  RECEBIDA
+  CANCELADA
+
+  @@map("status_comissao")
+}
+
 /// Tipo de trabalho dinâmico (decisão revertida: não é mais um enum fixo
 /// MANPOWER/FORKLIFT) — cadastrado/editado só por Administrador
 /// (TiposTrabalhoModule). `ativo=false` tira o tipo dos formulários novos
@@ -136,6 +149,8 @@ model Responsavel {
   sedes        Sede[]
   alocacoes    Alocacao[]
   pagamentos   Pagamento[]
+  comissoesSede           Comissao[] @relation("ComissaoSede")
+  comissoesFornecimento   Comissao[] @relation("ComissaoFornecimento")
 
   @@map("responsaveis")
 }
@@ -273,6 +288,7 @@ model Alocacao {
   tipoTrabalho TipoTrabalho @relation(fields: [tipoTrabalhoId], references: [id])
   confirmacao  Confirmacao?
   pagamento    Pagamento?
+  comissao     Comissao?
 
   @@index([funcionarioId], map: "idx_alocacoes_funcionario")
   @@index([vagaId], map: "idx_alocacoes_vaga")
@@ -318,11 +334,18 @@ model ConferenciaDia {
   @@map("conferencias_dia")
 }
 
+/// Valor de referência por tipo de trabalho + tipo de sede, com vigência
+/// (docs/features/pagamento.md, seções 4/6/7). `valor` = "valor gerado"
+/// (o que a sede paga pelo trabalho); `salarioBase` = valor-base do
+/// funcionário, só obrigatório para sede EXTERNA — em sede HUB o
+/// pagamento ao funcionário é livre (definido na hora de registrar o
+/// pagamento), então `salarioBase` fica sempre null.
 model TabelaValor {
   id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tipoTrabalhoId  String        @map("tipo_trabalho_id") @db.Uuid
   tipoSede        TipoSede      @map("tipo_sede")
   valor           Decimal       @db.Decimal(10, 2)
+  salarioBase     Decimal?      @map("salario_base") @db.Decimal(10, 2)
   dataInicio      DateTime?     @map("data_inicio") @db.Date
   dataFim         DateTime?     @map("data_fim") @db.Date
   ativo           Boolean       @default(true)
@@ -334,13 +357,28 @@ model TabelaValor {
   @@map("tabela_valores")
 }
 
+/// Obrigação de pagar o FUNCIONÁRIO por uma alocação confirmada
+/// (docs/features/pagamento.md) — `responsavelId` aqui é sempre o dono do
+/// funcionário (responsável pelo fornecimento), que é quem paga, mesmo
+/// quando a sede pertence a outro responsável (ver seção 15). 1:1 com
+/// `Alocacao` via `alocacaoId` único — âncora de idempotência (nunca cria
+/// pagamento duplicado pra mesma alocação, seção 29).
+///
+/// `valorPrevisto` e `valorPago` ficam SEMPRE separados (seção 27/28) —
+/// nunca sobrescrever um com o outro. Em sede EXTERNA, `valorPrevisto` já
+/// vem preenchido na confirmação (a partir de `TabelaValor.salarioBase`);
+/// em sede HUB, fica `null` até o responsável registrar o pagamento
+/// (valor livre, seção 7).
 model Pagamento {
   id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tipo           String?          @db.VarChar(100)
   responsavelId  String           @map("responsavel_id") @db.Uuid
   alocacaoId     String           @unique @map("alocacao_id") @db.Uuid
   funcionarioId  String           @map("funcionario_id") @db.Uuid
-  valor          Decimal          @db.Decimal(10, 2)
+  valorGerado    Decimal          @map("valor_gerado") @db.Decimal(10, 2)
+  valorPrevisto  Decimal?         @map("valor_previsto") @db.Decimal(10, 2)
+  valorPago      Decimal?         @map("valor_pago") @db.Decimal(10, 2)
+  comprovanteUrl String?          @map("comprovante_url")
   dataPrevista   DateTime?        @map("data_prevista") @db.Date
   dataPagamento  DateTime?        @map("data_pagamento") @db.Date
   status         StatusPagamento  @default(PENDENTE)
@@ -355,4 +393,43 @@ model Pagamento {
 
   @@index([status], map: "idx_pagamentos_status")
   @@map("pagamentos")
+}
+
+/// Split de comissão entre dono da sede e dono do funcionário, quando são
+/// responsáveis diferentes (docs/features/pagamento.md, seções 8-14). 1:1
+/// com `Alocacao`, mesma âncora de idempotência que `Pagamento`. Sem
+/// status próprio — "recebido ou não" deriva do `Pagamento` ligado à
+/// mesma `alocacaoId` (decisão: comissão é só projetada, não tem fluxo de
+/// registro próprio). Calculada uma única vez a partir de
+/// `Pagamento.valorPrevisto` (congelada — nunca recalcula se
+/// `valorPago` divergir depois). Quando o mesmo responsável é dono da
+/// sede e do funcionário, todo o resultado fica na perna de fornecimento
+/// (`valorComissaoSede = 0`) — evita contar em dobro ao somar "minha
+/// comissão" por qualquer uma das duas FKs. `valorComissaoFornecimento`
+/// pode ser NEGATIVO (seção 13/14 — dono do funcionário pode ficar
+/// devendo os ¥1.000 do dono da sede).
+model Comissao {
+  id                          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  alocacaoId                  String    @unique @map("alocacao_id") @db.Uuid
+  valorGerado                 Decimal   @map("valor_gerado") @db.Decimal(10, 2)
+  valorFuncionario             Decimal?  @map("valor_funcionario") @db.Decimal(10, 2)
+  resultadoCalculado           Decimal?  @map("resultado_calculado") @db.Decimal(10, 2)
+  responsavelSedeId           String    @map("responsavel_sede_id") @db.Uuid
+  valorComissaoSede            Decimal?  @map("valor_comissao_sede") @db.Decimal(10, 2)
+  statusSede                   StatusComissao @default(PENDENTE) @map("status_sede")
+  recebidoSedeEm                DateTime? @map("recebido_sede_em")
+  responsavelFornecimentoId   String    @map("responsavel_fornecimento_id") @db.Uuid
+  valorComissaoFornecimento    Decimal?  @map("valor_comissao_fornecimento") @db.Decimal(10, 2)
+  statusFornecimento            StatusComissao @default(PENDENTE) @map("status_fornecimento")
+  recebidoFornecimentoEm        DateTime? @map("recebido_fornecimento_em")
+  createdAt                   DateTime  @default(now()) @map("created_at")
+  updatedAt                   DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  alocacao              Alocacao     @relation(fields: [alocacaoId], references: [id])
+  responsavelSede        Responsavel @relation("ComissaoSede", fields: [responsavelSedeId], references: [id])
+  responsavelFornecimento Responsavel @relation("ComissaoFornecimento", fields: [responsavelFornecimentoId], references: [id])
+
+  @@index([responsavelSedeId], map: "idx_comissoes_responsavel_sede")
+  @@index([responsavelFornecimentoId], map: "idx_comissoes_responsavel_fornecimento")
+  @@map("comissoes")
 }

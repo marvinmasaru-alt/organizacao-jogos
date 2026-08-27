@@ -99,6 +99,14 @@ export const routes: Routes = [
             (m) => m.TiposTrabalhoComponent,
           ),
       },
+      {
+        path: 'tabela-valores',
+        canActivate: [perfilGuard(['ADMINISTRADOR'])],
+        loadComponent: () =>
+          import('./features/tabela-valores/tabela-valores.component').then(
+            (m) => m.TabelaValoresComponent,
+          ),
+      },
     ],
   },
   { path: '**', redirectTo: 'dashboard' },
