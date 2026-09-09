@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { StatusVaga } from '@prisma/client';
+import { StatusFuncionario, StatusVaga } from '@prisma/client';
 import { AlocacoesService } from '../alocacoes/alocacoes.service';
 import { PerfilUsuario } from '../common/types/enums';
 import { PrismaService } from '../prisma/prisma.service';
@@ -147,6 +147,19 @@ export class DashboardService {
         ? 0
         : Math.round((totalAlocado / totalNecessario) * 100);
 
+    // Contagem de funcionários PENDENTE de aprovação (docs/features/Cadastro-funcionario.md,
+    // "efeitos colaterais"). Sempre por dono do cadastro pro Responsável
+    // (nunca pelo `escopo` de sedes, que é outra coisa); Administrador vê o
+    // total do sistema, já que não tem responsavelId próprio pra filtrar.
+    const funcionariosPendentes = await this.prisma.funcionario.count({
+      where: {
+        status: StatusFuncionario.PENDENTE,
+        ...(usuario.perfil === PerfilUsuario.RESPONSAVEL
+          ? { responsavelId: usuario.responsavelId }
+          : {}),
+      },
+    });
+
     return {
       data,
       totais: {
@@ -186,6 +199,7 @@ export class DashboardService {
             };
           })
           .sort((a, b) => a.sedeSigla.localeCompare(b.sedeSigla)),
+        funcionariosPendentes,
       },
     };
   }

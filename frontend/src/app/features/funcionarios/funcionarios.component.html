@@ -1,0 +1,173 @@
+<header class="cabecalho">
+  <a class="link-voltar-dashboard" routerLink="/dashboard">← Dashboard</a>
+  <h1>Funcionários</h1>
+
+  @if (souAdministrador()) {
+    <select
+      class="seletor-responsavel"
+      [value]="responsavelSelecionadoId()"
+      (change)="selecionarResponsavel($any($event.target).value)"
+      aria-label="Filtrar por responsável"
+    >
+      <option value="">Todos os responsáveis</option>
+      @for (responsavel of responsaveis(); track responsavel.id) {
+        <option [value]="responsavel.id">{{ responsavel.nome }}</option>
+      }
+    </select>
+  }
+</header>
+
+<section class="secao" aria-label="Lista de funcionários">
+  <p class="ajuda">
+    Funcionários cadastrados via Google Forms. Editar corrige os dados ou
+    muda o status (pendente/aprovado/inativo) — nunca apaga o cadastro.
+    Só funcionários APROVADO aparecem disponíveis para alocação.
+  </p>
+
+  <input
+    type="text"
+    class="campo-busca"
+    placeholder="Buscar por nome…"
+    [value]="busca()"
+    (input)="atualizarBusca($any($event.target).value)"
+    aria-label="Buscar funcionário por nome"
+  />
+
+  @switch (estado()) {
+    @case ('carregando') {
+      <p class="estado">Carregando…</p>
+    }
+    @case ('erro') {
+      <p class="estado estado--erro">Não foi possível carregar os funcionários.</p>
+    }
+    @case ('carregado') {
+      @if (funcionarios().length === 0) {
+        <p class="estado">Nenhum funcionário cadastrado ainda.</p>
+      } @else if (funcionariosFiltrados().length === 0) {
+        <p class="estado">Nenhum funcionário encontrado para "{{ busca() }}".</p>
+      } @else {
+        <ul class="lista-funcionarios">
+          @for (funcionario of funcionariosFiltrados(); track funcionario.id) {
+            <li class="funcionario-item" [class.funcionario-item--inativo]="funcionario.status === 'INATIVO'">
+              @if (editandoId() === funcionario.id) {
+                <div class="funcionario-item__form">
+                  <label>
+                    Nome
+                    <input
+                      type="text"
+                      [value]="formularioEdicao().nome"
+                      (input)="atualizarCampoEdicao('nome', $any($event.target).value)"
+                    />
+                  </label>
+                  <label>
+                    Telefone
+                    <input
+                      type="text"
+                      [value]="formularioEdicao().telefone"
+                      (input)="atualizarCampoEdicao('telefone', $any($event.target).value)"
+                    />
+                  </label>
+                  <label>
+                    Província
+                    <input
+                      type="text"
+                      [value]="formularioEdicao().provincia"
+                      (input)="atualizarCampoEdicao('provincia', $any($event.target).value)"
+                    />
+                  </label>
+                  <label>
+                    Código postal
+                    <input
+                      type="text"
+                      [value]="formularioEdicao().codigoPostal"
+                      (input)="atualizarCampoEdicao('codigoPostal', $any($event.target).value)"
+                    />
+                  </label>
+                  <label>
+                    Documento — Frente (URL)
+                    <input
+                      type="text"
+                      [value]="formularioEdicao().documentoFrenteUrl"
+                      (input)="atualizarCampoEdicao('documentoFrenteUrl', $any($event.target).value)"
+                    />
+                  </label>
+                  <label>
+                    Documento — Verso (URL)
+                    <input
+                      type="text"
+                      [value]="formularioEdicao().documentoVersoUrl"
+                      (input)="atualizarCampoEdicao('documentoVersoUrl', $any($event.target).value)"
+                    />
+                  </label>
+                  <label>
+                    Status
+                    <select
+                      [value]="formularioEdicao().status"
+                      (change)="atualizarCampoEdicao('status', $any($event.target).value)"
+                    >
+                      <option value="PENDENTE">Pendente</option>
+                      <option value="APROVADO">Aprovado</option>
+                      <option value="INATIVO">Inativo</option>
+                      <option value="BLOQUEADO">Bloqueado</option>
+                    </select>
+                  </label>
+                  <div class="funcionario-item__acoes">
+                    <button
+                      type="button"
+                      class="botao-salvar"
+                      [disabled]="salvandoEdicao() || !formularioEdicao().nome.trim()"
+                      (click)="salvarEdicao(funcionario.id)"
+                    >
+                      {{ salvandoEdicao() ? 'Salvando…' : 'Salvar' }}
+                    </button>
+                    <button type="button" (click)="cancelarEdicao()">Cancelar</button>
+                  </div>
+                  @if (erroEdicao()) {
+                    <p class="estado estado--erro">{{ erroEdicao() }}</p>
+                  }
+                </div>
+              } @else {
+                <div class="funcionario-item__dados">
+                  <span class="funcionario-item__nome">
+                    {{ funcionario.nome }}
+                    <span
+                      class="funcionario-item__badge"
+                      [class.funcionario-item__badge--pendente]="funcionario.status === 'PENDENTE'"
+                      [class.funcionario-item__badge--aprovado]="funcionario.status === 'APROVADO'"
+                      [class.funcionario-item__badge--inativo]="funcionario.status === 'INATIVO' || funcionario.status === 'BLOQUEADO'"
+                    >
+                      {{ funcionario.status }}
+                    </span>
+                  </span>
+                  <span class="funcionario-item__detalhe">Telefone: {{ funcionario.telefone || '—' }}</span>
+                  <span class="funcionario-item__detalhe">Província: {{ funcionario.provincia || '—' }}</span>
+                  <span class="funcionario-item__detalhe">Código postal: {{ funcionario.codigoPostal || '—' }}</span>
+                  <span class="funcionario-item__detalhe">
+                    Documento:
+                    @if (documentoLinks(funcionario.documentoUrl); as links) {
+                      @if (links.length > 1) {
+                        @for (link of links; track link; let i = $index, last = $last) {
+                          <a [href]="link" target="_blank" rel="noopener">{{ i === 0 ? 'frente' : 'verso' }}</a>
+                          @if (!last) {
+                            <span> · </span>
+                          }
+                        }
+                      } @else if (links.length === 1) {
+                        <a [href]="links[0]" target="_blank" rel="noopener">ver</a>
+                      } @else {
+                        —
+                      }
+                    }
+                  </span>
+                </div>
+                <div class="funcionario-item__acoes">
+                  <button type="button" (click)="iniciarEdicao(funcionario)">Editar</button>
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      }
+    }
+  }
+</section>

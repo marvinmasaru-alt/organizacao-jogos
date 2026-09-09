@@ -61,6 +61,11 @@ export interface SubstituicaoUrgentePendencia {
 export interface DashboardPendencias {
   vagasIncompletas: VagaIncompletaPendencia[];
   substituicoesUrgentes: SubstituicaoUrgentePendencia[];
+  /**
+   * Nº de funcionários PENDENTE de aprovação (docs/features/Cadastro-funcionario.md)
+   * — do próprio responsável, ou total do sistema quando Administrador.
+   */
+  funcionariosPendentes: number;
 }
 
 export interface DashboardResumo {

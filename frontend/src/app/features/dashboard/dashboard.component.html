@@ -13,6 +13,7 @@
     <a class="link-configurar-vagas" routerLink="/tabela-valores">⚙ Tabela de valores</a>
   }
   <a class="link-configurar-vagas" routerLink="/pagamentos">💰 Pagamentos</a>
+  <a class="link-configurar-vagas" routerLink="/funcionarios">👤 Funcionários</a>
   <div class="seletor-data">
     <button type="button" (click)="irParaDataAnterior()" aria-label="Dia anterior">←</button>
     <input
@@ -54,6 +55,7 @@
         @if (
           r.pendencias.substituicoesUrgentes.length === 0 &&
           r.pendencias.vagasIncompletas.length === 0 &&
+          r.pendencias.funcionariosPendentes === 0 &&
           (totalAPagarPendente() ?? 0) === 0 &&
           (totalAReceberPendente() ?? 0) === 0
         ) {
@@ -93,6 +95,16 @@
           }
         }
 
+        @if (r.pendencias.funcionariosPendentes > 0) {
+          <h3 class="pendencias__subtitulo">
+            🟠 {{ r.pendencias.funcionariosPendentes }}
+            funcionário{{ r.pendencias.funcionariosPendentes > 1 ? 's' : '' }} aguardando aprovação
+          </h3>
+          <ul>
+            <li><a routerLink="/funcionarios">ver funcionários</a></li>
+          </ul>
+        }
+
         @if ((totalAPagarPendente() ?? 0) > 0 || (totalAReceberPendente() ?? 0) > 0) {
           <h3 class="pendencias__subtitulo pendencias__subtitulo--financeiro">💰 Pagamentos pendentes</h3>
           <ul>
@@ -129,7 +141,11 @@
         </div>
         <div class="card">
           <span class="card__valor">
-            {{ r.pendencias.vagasIncompletas.length + r.pendencias.substituicoesUrgentes.length }}
+            {{
+              r.pendencias.vagasIncompletas.length +
+                r.pendencias.substituicoesUrgentes.length +
+                r.pendencias.funcionariosPendentes
+            }}
           </span>
           <span class="card__label">pendências</span>
         </div>

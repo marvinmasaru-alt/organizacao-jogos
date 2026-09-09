@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import {
   StatusAlocacao,
   StatusConfirmacao,
@@ -8,6 +8,8 @@ import { AlocacoesService } from '../alocacoes/alocacoes.service';
 import { UsuarioAutenticado } from '../auth/auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PerfilUsuario } from '../common/types/enums';
+import { AtualizarFuncionarioDto } from './dto/atualizar-funcionario.dto';
+import { CadastrarFuncionarioExternoDto } from './dto/cadastrar-funcionario-externo.dto';
 import {
   Funcionario,
   FuncionarioAlocadoNaVaga,
@@ -28,6 +30,20 @@ export class FuncionariosService {
 
   async buscarPorId(id: string): Promise<Funcionario | null> {
     return this.prisma.funcionario.findUnique({ where: { id } });
+  }
+
+  /**
+   * Funcionários de um responsável para a tela de gestão "Funcionários"
+   * (docs/features/Cadastro-funcionario.md) — SEM filtro de status, ao
+   * contrário de `listarDisponiveisParaResponsavel`: aqui o responsável
+   * precisa ver e poder editar também os PENDENTE/INATIVO/BLOQUEADO, não
+   * só os já APROVADO.
+   */
+  async listarPorResponsavel(responsavelId: string): Promise<Funcionario[]> {
+    return this.prisma.funcionario.findMany({
+      where: { responsavelId },
+      orderBy: { nome: 'asc' },
+    });
   }
 
   /**
@@ -194,11 +210,58 @@ export class FuncionariosService {
     });
   }
 
-  /** Só o administrador aprova. Validação de perfil fica no controller/guard. */
-  async aprovar(id: string): Promise<void> {
-    await this.prisma.funcionario.update({
+  /**
+   * Edição de cadastro na tela de Funcionários (docs/features/Cadastro-funcionario.md)
+   * — inclui a mudança de status (pendente/aprovado/inativo/bloqueado).
+   * Checagem de posse (só o responsável dono ou o Administrador pode
+   * editar) é feita no controller, antes de chamar este método.
+   */
+  async atualizar(
+    id: string,
+    dto: AtualizarFuncionarioDto,
+  ): Promise<Funcionario> {
+    return this.prisma.funcionario.update({
       where: { id },
-      data: { status: StatusFuncionario.APROVADO },
+      data: dto,
+    });
+  }
+
+  /**
+   * Cadastro via Google Forms (docs/features/Cadastro-funcionario.md) — o
+   * Apps Script chama POST /funcionarios/externo a cada nova resposta.
+   * Tratamos como "insert externo": nunca confiar no carimbo de data/hora
+   * do form (created_at/updated_at usam o default `now()` do Prisma) e
+   * sempre entra `PENDENTE` (default do schema), pendente de aprovação do
+   * Administrador.
+   *
+   * `documentoUrlFrente`/`documentoUrlVerso` são duas perguntas separadas
+   * no form (frente e verso do Zairyū Card) e são unidas aqui em
+   * `documento_url`, separadas por vírgula.
+   */
+  async criarViaFormExterno(
+    dto: CadastrarFuncionarioExternoDto,
+  ): Promise<Funcionario> {
+    const responsavel = await this.prisma.responsavel.findUnique({
+      where: { id: dto.responsavelId },
+    });
+    if (!responsavel) {
+      throw new BadRequestException('responsavelId não encontrado');
+    }
+
+    const documentoUrl = [dto.documentoUrlFrente, dto.documentoUrlVerso]
+      .filter((url): url is string => !!url)
+      .join(',');
+
+    return this.prisma.funcionario.create({
+      data: {
+        nome: dto.nome,
+        telefone: dto.telefone,
+        provincia: dto.provincia,
+        codigoPostal: dto.codigoPostal,
+        documentoUrl: documentoUrl || null,
+        responsavelId: dto.responsavelId,
+        status: StatusFuncionario.PENDENTE,
+      },
     });
   }
 }
