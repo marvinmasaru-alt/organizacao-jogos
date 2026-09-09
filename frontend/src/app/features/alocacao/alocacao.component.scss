@@ -137,6 +137,26 @@
   font-size: 0.9rem;
 }
 
+.vaga-alocados__botao-editar-cargo {
+  margin-right: 0.35rem;
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.vaga-alocados__trocar-cargo {
+  margin-left: 0.5rem;
+  font-size: 0.85rem;
+  color: #555;
+
+  select {
+    margin-left: 0.25rem;
+  }
+}
+
 .funcionarios input[type='search'] {
   width: 100%;
   padding: 0.5rem;

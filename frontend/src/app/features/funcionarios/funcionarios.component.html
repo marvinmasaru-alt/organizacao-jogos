@@ -15,7 +15,83 @@
       }
     </select>
   }
+
+  @if (!souAdministrador()) {
+    <button type="button" class="botao-cadastrar-novo" (click)="alternarFormNovo()">
+      {{ mostrarFormNovo() ? 'Cancelar' : '+ Cadastrar funcionário' }}
+    </button>
+  }
 </header>
+
+@if (!souAdministrador() && mostrarFormNovo()) {
+  <section class="secao secao-cadastro-novo" aria-label="Cadastrar novo funcionário">
+    <h2>Cadastrar novo funcionário</h2>
+    <div class="funcionario-item__form">
+      <label>
+        Nome
+        <input
+          type="text"
+          [value]="formularioNovo().nome"
+          (input)="atualizarCampoNovo('nome', $any($event.target).value)"
+        />
+      </label>
+      <label>
+        Telefone
+        <input
+          type="text"
+          [value]="formularioNovo().telefone"
+          (input)="atualizarCampoNovo('telefone', $any($event.target).value)"
+        />
+      </label>
+      <label>
+        Província
+        <input
+          type="text"
+          [value]="formularioNovo().provincia"
+          (input)="atualizarCampoNovo('provincia', $any($event.target).value)"
+        />
+      </label>
+      <label>
+        Código postal
+        <input
+          type="text"
+          [value]="formularioNovo().codigoPostal"
+          (input)="atualizarCampoNovo('codigoPostal', $any($event.target).value)"
+        />
+      </label>
+      <label>
+        Documento — Frente (URL)
+        <input
+          type="text"
+          [value]="formularioNovo().documentoFrenteUrl"
+          (input)="atualizarCampoNovo('documentoFrenteUrl', $any($event.target).value)"
+        />
+      </label>
+      <label>
+        Documento — Verso (URL)
+        <input
+          type="text"
+          [value]="formularioNovo().documentoVersoUrl"
+          (input)="atualizarCampoNovo('documentoVersoUrl', $any($event.target).value)"
+        />
+      </label>
+      <div class="funcionario-item__acoes">
+        <button
+          type="button"
+          class="botao-salvar"
+          [disabled]="salvandoNovo() || !formularioNovo().nome.trim()"
+          (click)="cadastrarNovo()"
+        >
+          {{ salvandoNovo() ? 'Cadastrando…' : 'Cadastrar' }}
+        </button>
+        <button type="button" (click)="alternarFormNovo()">Cancelar</button>
+      </div>
+      @if (erroNovo()) {
+        <p class="estado estado--erro">{{ erroNovo() }}</p>
+      }
+    </div>
+  </section>
+}
 
 <section class="secao secao-filtros" aria-label="Filtros">
   <input

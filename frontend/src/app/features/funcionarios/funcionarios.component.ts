@@ -4,7 +4,12 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { ResponsavelPublico } from '../responsaveis/responsavel.model';
 import { ResponsaveisService } from '../responsaveis/responsaveis.service';
-import { AtualizarFuncionario, Funcionario, StatusFuncionario } from './funcionario.model';
+import {
+  AtualizarFuncionario,
+  CadastrarFuncionario,
+  Funcionario,
+  StatusFuncionario,
+} from './funcionario.model';
 import { FuncionariosService } from './funcionarios.service';
 
 type Estado = 'carregando' | 'erro' | 'carregado';
@@ -18,6 +23,24 @@ interface FormularioEdicao {
   documentoVersoUrl: string;
   status: StatusFuncionario;
 }
+
+interface FormularioNovo {
+  nome: string;
+  telefone: string;
+  provincia: string;
+  codigoPostal: string;
+  documentoFrenteUrl: string;
+  documentoVersoUrl: string;
+}
+
+const FORMULARIO_NOVO_VAZIO: FormularioNovo = {
+  nome: '',
+  telefone: '',
+  provincia: '',
+  codigoPostal: '',
+  documentoFrenteUrl: '',
+  documentoVersoUrl: '',
+};
 
 /**
  * Tela de gestão "Funcionários" (docs/features/Cadastro-funcionario.md):
@@ -87,6 +110,12 @@ export class FuncionariosComponent implements OnInit {
   });
   readonly salvandoEdicao = signal(false);
   readonly erroEdicao = signal<string | null>(null);
+
+  /** Seção "Cadastrar novo funcionário" — só Responsável cadastra (Administrador não tem responsavelId próprio). */
+  readonly mostrarFormNovo = signal(false);
+  readonly formularioNovo = signal<FormularioNovo>({ ...FORMULARIO_NOVO_VAZIO });
+  readonly salvandoNovo = signal(false);
+  readonly erroNovo = signal<string | null>(null);
 
   ngOnInit(): void {
     if (this.souAdministrador()) {
@@ -163,6 +192,51 @@ export class FuncionariosComponent implements OnInit {
         this.salvandoEdicao.set(false);
         this.erroEdicao.set(
           erro?.error?.message ?? 'Não foi possível salvar o funcionário.',
+        );
+      },
+    });
+  }
+
+  alternarFormNovo(): void {
+    this.mostrarFormNovo.set(!this.mostrarFormNovo());
+    this.formularioNovo.set({ ...FORMULARIO_NOVO_VAZIO });
+    this.erroNovo.set(null);
+  }
+
+  atualizarCampoNovo<K extends keyof FormularioNovo>(
+    campo: K,
+    valor: FormularioNovo[K],
+  ): void {
+    this.formularioNovo.set({ ...this.formularioNovo(), [campo]: valor });
+  }
+
+  cadastrarNovo(): void {
+    const form = this.formularioNovo();
+    const nome = form.nome.trim();
+    if (!nome || this.salvandoNovo()) return;
+
+    const dados: CadastrarFuncionario = {
+      nome,
+      telefone: form.telefone.trim() || undefined,
+      provincia: form.provincia.trim() || undefined,
+      codigoPostal: form.codigoPostal.trim() || undefined,
+      documentoUrlFrente: form.documentoFrenteUrl.trim() || undefined,
+      documentoUrlVerso: form.documentoVersoUrl.trim() || undefined,
+    };
+
+    this.salvandoNovo.set(true);
+    this.erroNovo.set(null);
+    this.service.cadastrar(dados).subscribe({
+      next: () => {
+        this.salvandoNovo.set(false);
+        this.mostrarFormNovo.set(false);
+        this.formularioNovo.set({ ...FORMULARIO_NOVO_VAZIO });
+        this.carregar();
+      },
+      error: (erro) => {
+        this.salvandoNovo.set(false);
+        this.erroNovo.set(
+          erro?.error?.message ?? 'Não foi possível cadastrar o funcionário.',
         );
       },
     });

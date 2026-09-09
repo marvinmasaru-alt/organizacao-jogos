@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../../core/api/api.config';
-import { AtualizarFuncionario, Funcionario } from './funcionario.model';
+import { AtualizarFuncionario, CadastrarFuncionario, Funcionario } from './funcionario.model';
 
 /** O interceptor já anexa o token de sessão salvo em toda chamada. */
 @Injectable({ providedIn: 'root' })
@@ -18,6 +18,10 @@ export class FuncionariosService {
     return this.http.get<Funcionario[]>(`${API_BASE_URL}/funcionarios/meus`, {
       params: responsavelId ? { responsavelId } : {},
     });
+  }
+
+  cadastrar(dados: CadastrarFuncionario): Observable<Funcionario> {
+    return this.http.post<Funcionario>(`${API_BASE_URL}/funcionarios`, dados);
   }
 
   atualizar(id: string, dados: AtualizarFuncionario): Observable<Funcionario> {

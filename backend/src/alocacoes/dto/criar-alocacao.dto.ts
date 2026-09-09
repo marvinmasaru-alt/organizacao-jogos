@@ -35,3 +35,17 @@ export class CancelarAlocacaoDto {
   @IsNotEmpty()
   motivoCancelamento!: string;
 }
+
+/**
+ * Corpo de PATCH /alocacoes/:id/tipo — troca o tipo de trabalho (cargo) de
+ * uma alocação já existente (ex.: escolhida como Forklift, corrigir pra
+ * Manpower) sem cancelar/recriar o registro. `vagaId` aqui é o
+ * `vaga_tipos.id` de DESTINO, mesma convenção usada em ItemAlocacaoDto —
+ * precisa ser outra linha de `vaga_tipos` da MESMA vaga (dia+sede) da
+ * alocação original.
+ */
+export class TrocarTipoAlocacaoDto {
+  @IsString()
+  @IsNotEmpty()
+  vagaId!: string;
+}

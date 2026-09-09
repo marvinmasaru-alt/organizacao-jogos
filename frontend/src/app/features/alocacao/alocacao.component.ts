@@ -89,6 +89,12 @@ export class AlocacaoComponent implements OnInit {
     new Map(),
   );
 
+  /** "Trocar cargo" no card "Ver funcionários alocados" — alocacaoId em troca no momento (desabilita o select dela). */
+  readonly trocandoTipoAlocacaoId = signal<string | null>(null);
+  readonly erroTrocaTipo = signal<string | null>(null);
+  /** Ícone de lápis: só mostra o dropdown de trocar cargo da alocação clicada. */
+  readonly editandoCargoAlocacaoId = signal<string | null>(null);
+
   /**
    * Um funcionário por linha, com a situação mais relevante entre todas as
    * vagas da sede (ver PRIORIDADE_SITUACAO) — corrige o bug de mostrar
@@ -234,6 +240,45 @@ export class AlocacaoComponent implements OnInit {
       },
       error: () => this.definirEstadoAlocados(vagaId, 'erro'),
     });
+  }
+
+  /**
+   * Troca o cargo de um funcionário já alocado (ex.: Forklift → Manpower)
+   * direto no card "Ver funcionários alocados", persistindo no backend
+   * (PATCH /alocacoes/:id/tipo). `vagaAtualId` é a vaga do card onde o
+   * select foi mexido — se o valor escolhido for o mesmo, não faz nada.
+   */
+  trocarCargoAlocado(
+    alocacaoId: string,
+    vagaAtualId: string,
+    novaVagaId: string,
+  ): void {
+    if (!novaVagaId || novaVagaId === vagaAtualId || this.trocandoTipoAlocacaoId()) return;
+    const sede = this.sedeSelecionada();
+    if (!sede) return;
+
+    this.trocandoTipoAlocacaoId.set(alocacaoId);
+    this.erroTrocaTipo.set(null);
+    this.service.trocarTipoAlocacao(alocacaoId, novaVagaId).subscribe({
+      next: () => {
+        this.trocandoTipoAlocacaoId.set(null);
+        if (this.editandoCargoAlocacaoId() === alocacaoId) {
+          this.editandoCargoAlocacaoId.set(null);
+        }
+        this.atualizarDepoisDaAlocacao(sede.sedeId);
+      },
+      error: (erro) => {
+        this.trocandoTipoAlocacaoId.set(null);
+        this.erroTrocaTipo.set(this.extrairMensagemErro(erro));
+      },
+    });
+  }
+
+  /** Ícone de lápis ao lado do nome — alterna a exibição do dropdown "Trocar cargo" só daquela linha. */
+  alternarEdicaoCargo(alocacaoId: string): void {
+    this.editandoCargoAlocacaoId.set(
+      this.editandoCargoAlocacaoId() === alocacaoId ? null : alocacaoId,
+    );
   }
 
   private definirEstadoAlocados(vagaId: string, estado: EstadoAlocados): void {

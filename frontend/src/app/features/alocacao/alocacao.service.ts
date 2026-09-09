@@ -54,4 +54,15 @@ export class AlocacaoService {
   criarAlocacoes(itens: ItemAlocacao[]): Observable<unknown> {
     return this.http.post(`${API_BASE_URL}/alocacoes`, { alocacoes: itens });
   }
+
+  /**
+   * Troca o tipo de trabalho (cargo) de uma alocação já feita (ex.:
+   * Forklift → Manpower) sem cancelar e recriar. `vagaId` é o
+   * `vaga_tipos.id` de destino, dentro da mesma sede/data.
+   */
+  trocarTipoAlocacao(alocacaoId: string, vagaId: string): Observable<unknown> {
+    return this.http.patch(`${API_BASE_URL}/alocacoes/${alocacaoId}/tipo`, {
+      vagaId,
+    });
+  }
 }

@@ -9,6 +9,7 @@ import { UsuarioAutenticado } from '../auth/auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PerfilUsuario } from '../common/types/enums';
 import { AtualizarFuncionarioDto } from './dto/atualizar-funcionario.dto';
+import { CadastrarFuncionarioDto } from './dto/cadastrar-funcionario.dto';
 import { CadastrarFuncionarioExternoDto } from './dto/cadastrar-funcionario-externo.dto';
 import {
   Funcionario,
@@ -223,6 +224,34 @@ export class FuncionariosService {
     return this.prisma.funcionario.update({
       where: { id },
       data: dto,
+    });
+  }
+
+  /**
+   * Cadastro manual pela tela de Funcionários (docs/features/Cadastro-funcionario.md)
+   * — feito pelo próprio Responsável logado. `responsavelId` já validado
+   * pelo controller (vem da sessão, nunca do corpo). Sempre entra
+   * `PENDENTE` (default do schema), pendente de aprovação do
+   * Administrador, igual ao cadastro via Google Forms.
+   */
+  async criar(
+    dto: CadastrarFuncionarioDto,
+    responsavelId: string,
+  ): Promise<Funcionario> {
+    const documentoUrl = [dto.documentoUrlFrente, dto.documentoUrlVerso]
+      .filter((url): url is string => !!url)
+      .join(',');
+
+    return this.prisma.funcionario.create({
+      data: {
+        nome: dto.nome,
+        telefone: dto.telefone,
+        provincia: dto.provincia,
+        codigoPostal: dto.codigoPostal,
+        documentoUrl: documentoUrl || null,
+        responsavelId,
+        status: StatusFuncionario.PENDENTE,
+      },
     });
   }
 

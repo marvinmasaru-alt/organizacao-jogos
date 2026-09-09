@@ -97,9 +97,38 @@
                             @for (a of alocadosPorVaga().get(vaga.id); track a.alocacaoId) {
                               <li>
                                 @if (a.nome) {
+                                  @if (!a.externo && sedeSelecionada()!.vagas.length > 1) {
+                                    <button
+                                      type="button"
+                                      class="vaga-alocados__botao-editar-cargo"
+                                      title="Trocar cargo"
+                                      aria-label="Trocar cargo"
+                                      (click)="alternarEdicaoCargo(a.alocacaoId)"
+                                    >
+                                      ✏️
+                                    </button>
+                                  }
                                   {{ a.nome }} - {{ a.telefone }}
                                   @if (a.externo) {
                                     (Externo)
+                                  }
+                                  @if (!a.externo && editandoCargoAlocacaoId() === a.alocacaoId) {
+                                    <label class="vaga-alocados__trocar-cargo">
+                                      <select
+                                        [value]="''"
+                                        [disabled]="trocandoTipoAlocacaoId() === a.alocacaoId"
+                                        (change)="trocarCargoAlocado(a.alocacaoId, vaga.id, $any($event.target).value); $any($event.target).value = ''"
+                                      >
+                                        <option value="" selected disabled>Trocar cargo</option>
+                                        @for (v of sedeSelecionada()!.vagas; track v.id) {
+                                          @if (v.id !== vaga.id) {
+                                            <option [value]="v.id" [disabled]="v.disponiveis <= 0">
+                                              {{ v.tipo }}
+                                            </option>
+                                          }
+                                        }
+                                      </select>
+                                    </label>
                                   }
                                 } @else {
                                   Funcionário de outro responsável
@@ -107,6 +136,9 @@
                               </li>
                             }
                           </ul>
+                          @if (erroTrocaTipo()) {
+                            <p class="estado estado--erro">{{ erroTrocaTipo() }}</p>
+                          }
                         }
                       }
                     }

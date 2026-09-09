@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma, StatusAlocacao, StatusConfirmacao } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { Alocacao } from './alocacao.entity';
@@ -230,6 +234,89 @@ export class AlocacoesService {
         },
       }),
     ]);
+  }
+
+  async buscarPorId(id: string): Promise<Alocacao | null> {
+    const linha = await this.prisma.alocacao.findUnique({
+      where: { id },
+      include: INCLUDE,
+    });
+    return linha ? this.mapear(linha) : null;
+  }
+
+  /**
+   * Troca o tipo de trabalho (cargo) de uma alocação ATIVA já existente —
+   * ex.: escolhida como Forklift, corrigir pra Manpower — sem cancelar e
+   * recriar o registro (o histórico da alocação em si continua o mesmo,
+   * só `tipo_trabalho_id` muda; a `confirmacao` 1:1 não é tocada).
+   *
+   * `novoVagaTipoId` precisa ser outra linha de `vaga_tipos` da MESMA vaga
+   * (dia+sede) da alocação original — trocar de sede/dia não é "trocar
+   * cargo", é cancelar e criar uma alocação nova em outro lugar. Revalida
+   * capacidade da vaga de destino com dado fresco do banco (mesma cautela
+   * de condição de corrida usada em toda operação que mexe em
+   * `vaga_tipos.quantidade`).
+   */
+  async trocarTipo(id: string, novoVagaTipoId: string): Promise<Alocacao> {
+    const alocacao = await this.prisma.alocacao.findUnique({
+      where: { id },
+      include: INCLUDE,
+    });
+    if (!alocacao) {
+      throw new NotFoundException('Alocação não encontrada.');
+    }
+    if (alocacao.status !== StatusAlocacao.ATIVA) {
+      throw new BadRequestException(
+        'Só é possível trocar o tipo de uma alocação ativa.',
+      );
+    }
+
+    const vagaTipoDestino = await this.prisma.vagaTipo.findUnique({
+      where: { id: novoVagaTipoId },
+    });
+    if (!vagaTipoDestino) {
+      throw new NotFoundException('Vaga de destino não encontrada.');
+    }
+    if (vagaTipoDestino.vagaId !== alocacao.vagaId) {
+      throw new BadRequestException(
+        'A troca de cargo só é permitida dentro da mesma vaga (mesma sede e data).',
+      );
+    }
+    if (vagaTipoDestino.tipoTrabalhoId === alocacao.tipoTrabalhoId) {
+      return this.mapear(alocacao); // já está nesse tipo, nada a fazer
+    }
+
+    // Checa capacidade + grava numa única transação — sem isso, duas
+    // trocas simultâneas pra mesma vaga de destino poderiam ambas passar
+    // na checagem antes de qualquer uma gravar (condição de corrida sobre
+    // `vaga_tipos.quantidade`, mesmo cuidado do CLAUDE.md).
+    const atualizada = await this.prisma.$transaction(async (tx) => {
+      const ocupadas = await tx.alocacao.count({
+        where: {
+          vagaId: vagaTipoDestino.vagaId,
+          tipoTrabalhoId: vagaTipoDestino.tipoTrabalhoId,
+          status: StatusAlocacao.ATIVA,
+          NOT: {
+            confirmacao: {
+              status: {
+                in: [StatusConfirmacao.FALTOU, StatusConfirmacao.SUBSTITUICAO_NECESSARIA],
+              },
+            },
+          },
+        },
+      });
+      if (ocupadas >= vagaTipoDestino.quantidade) {
+        throw new BadRequestException(
+          'Esta vaga de destino já está completa — não há espaço para trocar o cargo.',
+        );
+      }
+      return tx.alocacao.update({
+        where: { id },
+        data: { tipoTrabalhoId: vagaTipoDestino.tipoTrabalhoId },
+        include: INCLUDE,
+      });
+    });
+    return this.mapear(atualizada);
   }
 
   private mapear(a: AlocacaoComRelacoes): Alocacao {

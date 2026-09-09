@@ -16,6 +16,7 @@ import { ApiKeyGuard } from '../auth/guards/api-key.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PerfilUsuario } from '../common/types/enums';
 import { AtualizarFuncionarioDto } from './dto/atualizar-funcionario.dto';
+import { CadastrarFuncionarioDto } from './dto/cadastrar-funcionario.dto';
 import { CadastrarFuncionarioExternoDto } from './dto/cadastrar-funcionario-externo.dto';
 import { FuncionariosService } from './funcionarios.service';
 import {
@@ -120,6 +121,27 @@ export class FuncionariosController {
       );
     }
     return this.service.atualizar(id, dto);
+  }
+
+  /**
+   * Cadastro manual pela tela de Funcionários (docs/features/Cadastro-funcionario.md)
+   * — feito pelo próprio Responsável logado, além da entrada via Google
+   * Forms. responsavelId sempre vem da sessão (nunca do corpo — mesma
+   * regra de /disponiveis e /meus). Administrador não tem responsavelId
+   * próprio, então não cadastra por aqui.
+   */
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  cadastrar(
+    @Body() dto: CadastrarFuncionarioDto,
+    @Req() req: RequestComSessao,
+  ): Promise<Funcionario> {
+    if (!req.user.responsavelId) {
+      throw new ForbiddenException(
+        'Só um Responsável pode cadastrar funcionários.',
+      );
+    }
+    return this.service.criar(dto, req.user.responsavelId);
   }
 
   /**

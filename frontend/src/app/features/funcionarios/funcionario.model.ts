@@ -21,3 +21,18 @@ export interface AtualizarFuncionario {
   documentoUrl?: string;
   status?: StatusFuncionario;
 }
+
+/**
+ * Corpo de POST /funcionarios — cadastro manual pelo próprio Responsável
+ * logado. `documentoUrlFrente`/`documentoUrlVerso` chegam separados (o
+ * backend junta os dois em `documentoUrl`, separados por vírgula) — mesmo
+ * tratamento do cadastro via Google Forms.
+ */
+export interface CadastrarFuncionario {
+  nome: string;
+  telefone?: string;
+  provincia?: string;
+  codigoPostal?: string;
+  documentoUrlFrente?: string;
+  documentoUrlVerso?: string;
+}

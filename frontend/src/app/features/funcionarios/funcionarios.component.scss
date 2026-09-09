@@ -27,6 +27,22 @@
   font: inherit;
 }
 
+.botao-cadastrar-novo {
+  margin-left: auto;
+  padding: 0.5rem 0.9rem;
+  border: none;
+  border-radius: 6px;
+  background: #2e7d32;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.secao-cadastro-novo h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
+}
+
 .secao {
   border: 1px solid #ddd;
   border-radius: 8px;
