@@ -40,14 +40,35 @@
   margin: 0.25rem 0 1rem;
 }
 
+.secao-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .campo-busca {
-  width: 100%;
+  flex: 1 1 240px;
   box-sizing: border-box;
   padding: 0.5rem 0.75rem;
-  margin-bottom: 1rem;
   border: 1px solid #ccc;
   border-radius: 6px;
   font-size: 1rem;
+}
+
+.filtros__checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.filtro-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  color: #444;
 }
 
 .estado {

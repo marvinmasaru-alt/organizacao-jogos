@@ -17,13 +17,7 @@
   }
 </header>
 
-<section class="secao" aria-label="Lista de funcionários">
-  <p class="ajuda">
-    Funcionários cadastrados via Google Forms. Editar corrige os dados ou
-    muda o status (pendente/aprovado/inativo) — nunca apaga o cadastro.
-    Só funcionários APROVADO aparecem disponíveis para alocação.
-  </p>
-
+<section class="secao secao-filtros" aria-label="Filtros">
   <input
     type="text"
     class="campo-busca"
@@ -32,6 +26,40 @@
     (input)="atualizarBusca($any($event.target).value)"
     aria-label="Buscar funcionário por nome"
   />
+  <div class="filtros__checkboxes">
+    <label class="filtro-checkbox">
+      <input
+        type="checkbox"
+        [checked]="mostrarInativos()"
+        (change)="alternarMostrarInativos($any($event.target).checked)"
+      />
+      Mostrar inativos
+    </label>
+    <label class="filtro-checkbox">
+      <input
+        type="checkbox"
+        [checked]="somentePendentes()"
+        (change)="alternarSomentePendentes($any($event.target).checked)"
+      />
+      Somente pendentes
+    </label>
+    <label class="filtro-checkbox">
+      <input
+        type="checkbox"
+        [checked]="somenteSemFoto()"
+        (change)="alternarSomenteSemFoto($any($event.target).checked)"
+      />
+      Somente sem foto
+    </label>
+  </div>
+</section>
+
+<section class="secao" aria-label="Lista de funcionários">
+  <p class="ajuda">
+    Funcionários cadastrados via Google Forms. Editar corrige os dados ou
+    muda o status (pendente/aprovado/inativo) — nunca apaga o cadastro.
+    Só funcionários APROVADO aparecem disponíveis para alocação.
+  </p>
 
   @switch (estado()) {
     @case ('carregando') {
@@ -44,7 +72,7 @@
       @if (funcionarios().length === 0) {
         <p class="estado">Nenhum funcionário cadastrado ainda.</p>
       } @else if (funcionariosFiltrados().length === 0) {
-        <p class="estado">Nenhum funcionário encontrado para "{{ busca() }}".</p>
+        <p class="estado">Nenhum funcionário encontrado.</p>
       } @else {
         <ul class="lista-funcionarios">
           @for (funcionario of funcionariosFiltrados(); track funcionario.id) {

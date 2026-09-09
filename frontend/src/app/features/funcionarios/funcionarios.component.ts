@@ -44,14 +44,26 @@ export class FuncionariosComponent implements OnInit {
 
   /** Campo de busca no topo — filtra por nome, ignorando acentos e maiúsculas/minúsculas. */
   readonly busca = signal<string>('');
+  /** Checkbox "Mostrar inativos" — por padrão, status INATIVO fica escondido da listagem. */
+  readonly mostrarInativos = signal<boolean>(false);
+  /** Checkbox "Somente pendentes" — mostra só status PENDENTE. */
+  readonly somentePendentes = signal<boolean>(false);
+  /** Checkbox "Somente sem foto" — mostra só quem não tem nenhum link de documento cadastrado. */
+  readonly somenteSemFoto = signal<boolean>(false);
   readonly funcionariosFiltrados = computed(() => {
     const termo = this.normalizarTexto(this.busca());
-    if (!termo) {
-      return this.funcionarios();
-    }
-    return this.funcionarios().filter((funcionario) =>
-      this.normalizarTexto(funcionario.nome).includes(termo),
-    );
+    return this.funcionarios().filter((funcionario) => {
+      if (!this.mostrarInativos() && funcionario.status === 'INATIVO') {
+        return false;
+      }
+      if (this.somentePendentes() && funcionario.status !== 'PENDENTE') {
+        return false;
+      }
+      if (this.somenteSemFoto() && this.documentoLinks(funcionario.documentoUrl).length > 0) {
+        return false;
+      }
+      return !termo || this.normalizarTexto(funcionario.nome).includes(termo);
+    });
   });
 
   readonly souAdministrador = computed(
@@ -158,6 +170,18 @@ export class FuncionariosComponent implements OnInit {
 
   atualizarBusca(valor: string): void {
     this.busca.set(valor);
+  }
+
+  alternarMostrarInativos(valor: boolean): void {
+    this.mostrarInativos.set(valor);
+  }
+
+  alternarSomentePendentes(valor: boolean): void {
+    this.somentePendentes.set(valor);
+  }
+
+  alternarSomenteSemFoto(valor: boolean): void {
+    this.somenteSemFoto.set(valor);
   }
 
   private normalizarTexto(texto: string): string {
